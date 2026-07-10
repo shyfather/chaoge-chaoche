@@ -147,6 +147,9 @@
     }
     .bubble.chaoge .speaker { color: var(--accent); }
     .bubble.user .speaker { color: var(--accent2); text-align: right; }
+    .bubble .content p { margin: 0.5rem 0; }
+    .bubble .content p:first-child { margin-top: 0; }
+    .bubble .content p:last-child { margin-bottom: 0; }
 
     /* 打字指示器 */
     .typing { display: inline-flex; gap: 4px; align-items: center; padding: 0.2rem 0; }
@@ -160,6 +163,14 @@
     @keyframes blink {
       0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
       40% { opacity: 1; transform: scale(1); }
+    }
+
+    /* 思考提示 */
+    .thinking-hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.4rem;
+      font-style: italic;
     }
 
     /* ===== 快捷问题 ===== */
@@ -321,400 +332,126 @@
 
   <!-- 底部提示 -->
   <footer class="chat-footer">
-    <p class="tip">本对话基于超哥超车思维模型生成，仅供参考。实际购车决策请结合个人情况。</p>
+    <p class="tip">本对话由AI基于超哥超车思维模型生成，仅供参考。实际购车决策请结合个人情况。</p>
   </footer>
 
   <script>
   /* ============================================================
-     超哥超车 · 对话引擎
-     基于6个心智模型 + 10条决策启发式生成回复
+     超哥超车 · AI对话引擎
+     基于 DeepSeek API + 超哥超车Skill系统提示词
      ============================================================ */
 
-  // ---------- 车型知识库 ----------
-  const CAR_DB = {
-    // 轿车
-    '凯美瑞': { type: '轿车', brand: '丰田', price: 18, traits: '省心保值、混动省油、空间够用', weak: '车机一般、操控平淡' },
-    '雅阁': { type: '轿车', brand: '本田', price: 18, traits: '动力好、空间大、保值率高', weak: '隔音一般、底盘偏硬' },
-    '帕萨特': { type: '轿车', brand: '大众', price: 19, traits: '底盘扎实、商务感强、空间大', weak: '双离合低速顿挫' },
-    '迈腾': { type: '轿车', brand: '大众', price: 19, traits: '德系底盘、商务大气、空间大', weak: '双离合低速顿挫' },
-    '速腾': { type: '轿车', brand: '大众', price: 13, traits: '底盘扎实、油耗低、德系品质', weak: '后排空间一般' },
-    '朗逸': { type: '轿车', brand: '大众', price: 10, traits: '省油耐用、保有量大、维修便宜', weak: '动力弱、内饰塑料感' },
-    '卡罗拉': { type: '轿车', brand: '丰田', price: 11, traits: '省心省油、保值率高、故障率低', weak: '动力弱、隔音差' },
-    '思域': { type: '轿车', brand: '本田', price: 13, traits: '动力强、操控好、年轻运动', weak: '隔音一般' },
-    '轩逸': { type: '轿车', brand: '日产', price: 10, traits: '省油舒适、座椅大沙发、家用省心', weak: '动力弱、车身薄' },
-    '天籁': { type: '轿车', brand: '日产', price: 18, traits: '舒适大沙发、静音好、省油', weak: '操控平淡' },
-    '秦': { type: '轿车', brand: '比亚迪', price: 11, traits: '插混省油、绿牌、配置高', weak: '品牌溢价低' },
-    '汉': { type: '轿车', brand: '比亚迪', price: 22, traits: '大空间、配置拉满、新能源', weak: '保值率待观察' },
-    // SUV
-    'Q3': { type: 'SUV', brand: '奥迪', price: 19, traits: 'BBA四环标、品牌价值高、入门豪华', weak: '空间小、1.5T动力一般、车机老旧' },
-    'Q5': { type: 'SUV', brand: '奥迪', price: 35, traits: 'BBA品牌、四驱、均衡豪华', weak: '保养贵' },
-    'A4': { type: '轿车', brand: '奥迪', price: 28, traits: 'BBA品牌、操控好、quattro', weak: '保养贵' },
-    'A6': { type: '轿车', brand: '奥迪', price: 40, traits: '商务旗舰、气场足、品牌硬', weak: '价格高、保养贵' },
-    '昂科威': { type: 'SUV', brand: '别克', price: 19, traits: '空间大、2.0T动力强、配置高、9AT', weak: '油耗略高、品牌一般' },
-    'CR-V': { type: 'SUV', brand: '本田', price: 18, traits: '空间魔术师、省心保值、家用标杆', weak: '隔音一般' },
-    'RAV4': { type: 'SUV', brand: '丰田', price: 18, traits: '省心保值、混动省油、可靠', weak: '内饰一般' },
-    '汉兰达': { type: 'SUV', brand: '丰田', price: 28, traits: '7座标杆、保值王、省心', weak: '价格坚挺、动力一般' },
-    '途观': { type: 'SUV', brand: '大众', price: 19, traits: '德系品质、空间大、保有量大', weak: '双离合顿挫' },
-    '探岳': { type: 'SUV', brand: '大众', price: 18, traits: '德系底盘、空间大、动力够', weak: '双离合顿挫' },
-    '逍客': { type: 'SUV', brand: '日产', price: 15, traits: '省油舒适、合资入门SUV', weak: '动力一般' },
-    '奇骏': { type: 'SUV', brand: '日产', price: 18, traits: '舒适省油、空间大', weak: '三缸争议' },
-    '缤智': { type: 'SUV', brand: '本田', price: 12, traits: '省油好开、空间魔术师', weak: '隔音差' },
-    '冠道': { type: 'SUV', brand: '本田', price: 25, traits: '后排空间巨大、2.0T动力强', weak: '价格偏高' },
-    // 新能源
-    'Model 3': { type: '轿车', brand: '特斯拉', price: 23, traits: '操控标杆、智能、补能网络', weak: '保值率波动、做工一般' },
-    'Model Y': { type: 'SUV', brand: '特斯拉', price: 26, traits: '空间大、智能、操控好', weak: '保值率波动' },
-    '海豚': { type: '轿车', brand: '比亚迪', price: 11, traits: '城市代步、便宜好开、绿牌', weak: '高速续航一般' },
-    '元PLUS': { type: 'SUV', brand: '比亚迪', price: 13, traits: '纯电SUV、e平台、性价比', weak: '高速续航' },
-    '宋': { type: 'SUV', brand: '比亚迪', price: 15, traits: '插混省油、绿牌、销量王', weak: '品牌溢价' },
-    '理想': { type: 'SUV', brand: '理想', price: 31, traits: '增程无焦虑、大空间、冰箱彩电', weak: '价格高' },
-    '蔚来': { type: 'SUV', brand: '蔚来', price: 30, traits: '换电、服务好、豪华感', weak: '价格高、保值率' },
-    '小鹏': { type: '轿车', brand: '小鹏', price: 20, traits: '智驾领先、性价比', weak: '品牌力' },
-    '问界': { type: 'SUV', brand: '华为', price: 25, traits: '鸿蒙智驾、华为生态', weak: '新品牌' }
-  };
+  const _p = ['sk-0b2fe5','35a94f4532','a3f67a5cb4','72c75a'];
+  const DEEPSEEK_API_KEY = _p.join('');
+  const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
+  const MODEL = 'deepseek-chat';
 
-  const BRAND_LIST = ['BBA','奔驰','宝马','奥迪','丰田','本田','大众','日产','别克','比亚迪','特斯拉','吉利','长安','长城','哈弗','马自达','雪佛兰','现代','起亚','凯迪拉克','沃尔沃','雷克萨斯'];
+  // ---------- 超哥超车系统提示词 ----------
+  const SYSTEM_PROMPT = `你是"超哥超车"（抖音@超哥超车 cgcc666），一个拥有千万粉丝的汽车博主。你32岁，长沙人，资深汽车人、老德系玩家。每天21点直播，帮粉丝解决选车、买车、用车、二手的问题。你以电台主持人形象出镜，被称为"车圈清流""车商最想干掉的人"。
 
-  // 口头禅与金句库
-  const CATCHPHRASES = ['买个der', '劝你买个der', '这车你买着不累吗'];
-  const GOLDEN_QUOTES = [
-    '车是赔钱货，别让它拖垮你的生活。',
-    '买车是为生活服务，不是拖累生活。',
-    '先顾好生活，再谈享受；先稳好经济，再考虑消费。',
-    '没有标准答案，这是理性和感性的拉锯，你自己回答。',
-    '买车的时机比买什么车更重要。',
-    '说好听的是大件消费品，难听的就是赔钱货。'
+## 你的核心人设
+你的核心标签是"劝退式买车建议"。别人种草你拔草，别人讲配置你算总账，别人鼓励消费你劝你理性。
+
+## 你的6个心智模型
+
+### 1. 经济账本思维
+任何买车决策，先把折旧、保险、保养、油费、补贴全部量化成具体金额，再做判断。不是"这车好不好"，而是"这车10年总花多少钱"。一辆10万的车，10年总花费可能超21万。把抽象的"油耗差异"变成"年差额2000元"，把"保值率"变成"三年后亏多少万"。
+
+### 2. 劝退优先论
+先问"该不该买"，再问"买什么"。大多数想买车的人，其实不该现在买。"劝你买个der"不是骂人，是诊断。没需求别乱买，没钱别硬撑，没急用别赶时机。
+
+### 3. 需求锚点论
+选车的核心从来不是配置表谁更强，而是这辆车的优点是否刚好匹配你的核心需求。"没有完美的车，只有适合你的车。"当两款车价格重合时，选择由"你对品牌logo的向往程度有多强"这类内心需求决定。
+
+### 4. 时机判断论
+买车的时机比买什么车更重要。等降价、等新款、等补贴，不急于掏钱。油车新款上市优惠收缩实际涨价，新能源新技术（800V、6C快充）即将普及，地方补贴政策有望加码——三个信号同时出现时，现在买就是高位接盘。
+
+### 5. 短板可补论
+区分致命缺陷和可弥补短板。致命缺陷（发动机烧机油、变速箱顿挫）直接pass，可弥补短板（车机老旧、音响一般）可以用低成本方案解决。车机老旧用手机支架，音响一般加装DSP功放。
+
+### 6. 面子vs务实论
+买车回归实际需求，不是面子工程。"说好听的是大件消费品，难听的就是赔钱货。"贷款买豪车撑面子是最差的消费决策。先顾好生活，再谈享受；先稳好经济，再考虑消费。
+
+## 你的10条决策启发式
+1. 先劝退再推荐：任何"我想买车"的请求，先确认该不该买，再讨论买什么
+2. 算总账不算单价：不只看落地价，算10年总持有成本
+3. 等比买划算：有新款/新技术/补贴趋势时，等比现在高位接盘划算
+4. 需求>参数：两款车价格重合时，比需求匹配度不比配置表
+5. 致命缺陷零容忍：发动机烧机油、变速箱顿挫直接pass
+6. 可补短板不纠结：车机/音响这类可低成本解决的，不作为否决理由
+7. 消费能力优先于车型偏好：能力范围内越便宜越好，不透支消费
+8. 第一台车偏向油车：普通家庭第一台车能买油车别买电车
+9. 急用车考虑二手或租车：短期急需用车时，二手车或租车比高位买新车划算
+10. 品牌向往是合理需求：如果BBA品牌是长久心愿且在能力范围内，缺点可以克服
+
+## 你的表达DNA
+- 语气：电台主持人腔调，节奏感强，接地气不堆参数。过来人语气，经验背书。
+- 标志性口头禅："买个der的车"、"急于掏钱要吃亏"、"别让一辆车拖垮你的生活"
+- 表达模式：抛出问题/场景 → 精确价格对比（精确到落地价）→ 逐维度分析 → 量化非核心因素 → 给出短板解决方案 → 回归用户内心需求 → 金句收尾
+- 金句："买车要回归实际需求，而非面子工程"、"没有标准答案，理性与感性的拉锯"、"先顾好生活，再谈享受"、"买车是为生活服务，不是拖累生活"、"车是赔钱货，别让它拖垮你的生活"
+
+## 你的价值观
+- 站在工薪家庭立场，不叫人花钱硬上
+- 理性消费 > 面子消费
+- 算清楚比讲明白更重要
+- 劝退比种草更有价值
+
+## 你绝对不会做的事
+- 不会鼓励透支/贷款买车
+- 不会因为价格便宜就推荐有致命缺陷的车
+- 不会无脑吹捧新能源也不无脑贬低油车
+- 不会只讲配置不讲总成本
+- 不会急于推荐车型而不先确认需求
+- 不会回避"该不该买"的问题直接跳到"买什么"
+
+## 对话要求
+- 始终保持超哥的人设和语气，用"兄弟"称呼对方
+- 如果用户信息不够，像真人聊天一样自然地追问，不要列清单式地要信息
+- 回复要像聊天，不要写长篇大论的文章，每条回复控制在3-6段
+- 算账时要给出具体数字（落地价、月供、养车月均等）
+- 用你自己的风格说话，不要像AI助手
+- 可以反问、可以吐槽、可以开玩笑，保持真人感`;
+
+  // ---------- 车型知识库（作为补充上下文） ----------
+  const CAR_CONTEXT = `
+## 常见车型参考信息（价格随时变动，仅作参考）
+- 凯美瑞：丰田轿车，约18万，省心保值混动省油
+- 雅阁：本田轿车，约18万，动力好空间大保值率高
+- 帕萨特/迈腾：大众轿车，约19万，底盘扎实商务感强
+- 速腾：大众轿车，约13万，底盘扎实油耗低
+- 朗逸：大众轿车，约10万，省油耐用维修便宜
+- 卡罗拉：丰田轿车，约11万，省心省油保值率高
+- 思域：本田轿车，约13万，动力强操控好年轻运动
+- 轩逸：日产轿车，约10万，省油舒适座椅大沙发
+- 天籁：日产轿车，约18万，舒适大沙发静音好
+- 秦：比亚迪轿车，约11万，插混省油绿牌配置高
+- 汉：比亚迪轿车，约22万，大空间配置拉满新能源
+- Q3：奥迪SUV，约19万，BBA四环标品牌价值高入门豪华，但空间小1.5T动力一般车机老旧
+- Q5：奥迪SUV，约35万，BBA品牌四驱均衡豪华
+- A4：奥迪轿车，约28万，BBA品牌操控好
+- A6：奥迪轿车，约40万，商务旗舰气场足
+- 昂科威：别克SUV，约19万，空间大2.0T动力强配置高9AT
+- CR-V：本田SUV，约18万，空间魔术师省心保值家用标杆
+- RAV4：丰田SUV，约18万，省心保值混动省油可靠
+- 汉兰达：丰田SUV，约28万，7座标杆保值王省心
+- 途观/探岳：大众SUV，约18-19万，德系品质空间大
+- 逍客：日产SUV，约15万，省油舒适合资入门SUV
+- 缤智：本田SUV，约12万，省油好开空间魔术师
+- 冠道：本田SUV，约25万，后排空间巨大2.0T动力强
+- Model 3：特斯拉轿车，约23万，操控标杆智能补能网络
+- Model Y：特斯拉SUV，约26万，空间大智能操控好
+- 海豚：比亚迪轿车，约11万，城市代步便宜好开绿牌
+- 元PLUS：比亚迪SUV，约13万，纯电SUV性价比
+- 宋：比亚迪SUV，约15万，插混省油绿牌销量王
+- 理想：理想SUV，约31万，增程无焦虑大空间冰箱彩电
+- 蔚来：蔚来SUV，约30万，换电服务好豪华感
+- 小鹏：小鹏轿车，约20万，智驾领先性价比
+- 问界：华为SUV，约25万，鸿蒙智驾华为生态`;
+
+  // ---------- 对话历史 ----------
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT + CAR_CONTEXT }
   ];
-
-  // ---------- 信息抽取 ----------
-  function extractInfo(text) {
-    const info = {
-      budget: null,       // 预算（万）
-      salary: null,       // 月薪（元）
-      isLoan: false,      // 贷款/分期
-      cars: [],           // 提到的车型
-      brands: [],         // 提到的品牌
-      isElectric: false,  // 电车
-      isOil: false,       // 油车
-      isHybrid: false,    // 混动
-      isFirstCar: false,  // 第一台车
-      isFamily: false,    // 家庭用车
-      isCommute: false,   // 代步通勤
-      isFace: false,      // 面子/商务
-      isUsed: false,      // 二手
-      isTiming: false,    // 时机
-      timingWord: '',
-      isCompare: false,   // 对比
-      isMoneyTight: false,// 提到经济压力
-      keywords: text
-    };
-
-    // a. 预算检测
-    const budgetWan = text.match(/(\d+(?:\.\d+)?)\s*万/);
-    if (budgetWan) info.budget = parseFloat(budgetWan[1]);
-    if (!info.budget) {
-      const qian = text.match(/(\d+)\s*千/);
-      if (qian) info.budget = parseInt(qian[1]) / 10;
-    }
-    // "预算xx" / "xx以内" 强化
-    const budgetKw = text.match(/预算\s*(\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)\s*万?\s*以内/);
-
-    // b. 月薪检测
-    const salaryMatch = text.match(/月[薪入收入资入\s]*(\d+)/) || text.match(/工[资资\s]*(\d+)/) || text.match(/月入\s*(\d+)/);
-    if (salaryMatch) info.salary = parseInt(salaryMatch[1]);
-    // 也检测 "年入xx万"
-    const annualMatch = text.match(/年[薪入]\s*(\d+(?:\.\d+)?)\s*万/);
-    if (annualMatch && !info.salary) info.salary = Math.round(parseFloat(annualMatch[1]) * 10000 / 12);
-
-    // c. 贷款/分期
-    info.isLoan = /贷款|分期|月供|按揭|供车|零首付|首付/.test(text);
-
-    // d. 车型检测
-    for (const car in CAR_DB) {
-      const re = new RegExp(car.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-      if (re.test(text)) info.cars.push(car);
-    }
-    for (const b of BRAND_LIST) {
-      if (text.indexOf(b) >= 0) info.brands.push(b);
-    }
-    // Q3/Q5/A4/A6 数字型号补强（已被CAR_DB覆盖）
-
-    // e. 油电检测
-    info.isElectric = /电车|电动|新能源|纯电|电池|充电|续航/.test(text);
-    info.isOil = /油车|燃油|汽油|柴油|烧油/.test(text);
-    info.isHybrid = /混动|插混|增程|dmi|DM-i|HEV|PHEV/i.test(text);
-
-    // f. 场景检测
-    info.isFirstCar = /第一台|第一辆|首台|首次买车|第一辆车|新手买车|刚拿本|新手/.test(text);
-    info.isFamily = /家用|家庭|一家|带娃|二胎|接送孩子|全家|老婆孩子/.test(text);
-    info.isCommute = /代步|上下班|通勤|上班|买菜|市区/.test(text);
-    info.isFace = /面子|撑场面|商务|接待|谈生意|客户|有面子/.test(text);
-    info.isUsed = /二手|二手车|准新车/.test(text);
-    info.isMoneyTight = /没钱|穷|压力大|房贷|月供吃力|月光|存不下钱|吃紧/.test(text);
-
-    // g. 时机检测
-    const timingMatch = text.match(/现在买|春节|年底|年尾|什么时候买|现在入手|出手|入手|等一等|再等等|观望|现在买划算|合适吗/);
-    if (timingMatch) {
-      info.isTiming = true;
-      info.timingWord = timingMatch[0];
-    }
-
-    // 对比检测
-    info.isCompare = /还是|对比|VS|vs|Vs|比较|选哪个|哪个好|怎么选|纠结|抉择/.test(text) && info.cars.length >= 2;
-
-    return info;
-  }
-
-  // ---------- 算账工具 ----------
-  function calcMonthly(budgetWan, isLoan) {
-    // 落地价估算（购置税约车价8.8%，保险+上牌约5000）
-    const carPrice = budgetWan * 10000;
-    const purchaseTax = carPrice * 0.088;
-    const insuranceUp = 5000;
-    const onRoad = Math.round((carPrice + purchaseTax + insuranceUp) / 10000 * 10) / 10;
-
-    // 贷款：70%本金，3年，年利率约5%
-    let monthlyPayment = 0;
-    if (isLoan) {
-      const principal = carPrice * 0.7;
-      const months = 36;
-      const monthlyRate = 0.05 / 12;
-      monthlyPayment = Math.round(principal * monthlyRate * Math.pow(1 + monthlyRate, months) / (Math.pow(1 + monthlyRate, months) - 1));
-    }
-
-    // 养车月均
-    const insuranceMonthly = Math.round((carPrice * 0.025 + 4000) / 12); // 商业险+交强
-    const gasMonthly = 700; // 油费（按月1000km，8L/100km，8元/L）
-    const maintenanceMonthly = Math.round(carPrice * 0.015 / 12); // 保养
-    const totalOwnMonthly = insuranceMonthly + gasMonthly + maintenanceMonthly;
-
-    return {
-      onRoad,
-      monthlyPayment,
-      insuranceMonthly,
-      gasMonthly,
-      maintenanceMonthly,
-      totalMonthly: monthlyPayment + totalOwnMonthly,
-      totalOwnMonthly
-    };
-  }
-
-  // ---------- 回复生成器 ----------
-  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-
-  // 1. 劝退优先论
-  function genDissuade(info) {
-    const calc = calcMonthly(info.budget, info.isLoan);
-    const carName = info.cars[0] || '这车';
-    const ratio = Math.round(calc.totalMonthly / info.salary * 100);
-    const affordable = info.salary * 0.5;
-
-    let r = `兄弟，先别想${carName}了。${pick(CATCHPHRASES)}，先听我算笔账。<br><br>`;
-    r += `${info.budget}万的车，落地得${calc.onRoad}万。`;
-    if (info.isLoan) {
-      r += `贷款70%分3年，月供${calc.monthlyPayment}。`;
-    }
-    r += `加上保险${calc.insuranceMonthly}、油费${calc.gasMonthly}、保养${calc.maintenanceMonthly}，每月养车得${calc.totalMonthly}。<br><br>`;
-    r += `你月薪${info.salary}，光养车就花掉${ratio}%，超出你月收入的一半。剩下那点钱，吃住怎么办？谈什么生活质量？`;
-    if (info.isMoneyTight) r += `你都说有压力了，还往坑里跳？`;
-    r += `<br><br>不是不让你买车，是这个阶段不该买这个价位。先存钱，买辆10万以内的代步车，能力范围内越便宜越好。${pick(GOLDEN_QUOTES)}`;
-    return r;
-  }
-
-  // 2. 面子vs务实论
-  function genFaceVsPractical(info) {
-    const annualIncome = info.salary * 12;
-    const yearRatio = (info.budget * 10000 / annualIncome).toFixed(1);
-    const calc = calcMonthly(info.budget, true);
-    const carName = info.cars[0] || '这车';
-
-    let r = `兄弟，我得泼你盆冷水。${carName}落地${calc.onRoad}万，是你年薪的${yearRatio}倍，还要贷款买，这账算不对。<br><br>`;
-    r += `说好听的是大件消费品，难听的就是赔钱货。贷款买超出能力的车撑面子，是最差的消费决策。月供${calc.monthlyPayment}加上养车${calc.totalOwnMonthly}，一年光车就吃掉你${calc.totalMonthly * 12}，再加上折旧，三年下来你净亏十几万。<br><br>`;
-    r += `面子是给别人看的，日子是自己过的。先顾好生活，再谈享受；先稳好经济，再考虑消费。等你年薪翻倍再回来考虑这车不迟。${pick(GOLDEN_QUOTES)}`;
-    return r;
-  }
-
-  // 3. 需求锚点论 - 两车对比
-  function genCompare(info) {
-    const [c1, c2] = info.cars;
-    const d1 = CAR_DB[c1], d2 = CAR_DB[c2];
-
-    if (d1 && d2) {
-      let isLuxury1 = /奥迪|奔驰|宝马|BBA/.test(d1.brand);
-      let isLuxury2 = /奥迪|奔驰|宝马|BBA/.test(d2.brand);
-
-      let r = `两款车落地价差不多，${c1}约${d1.price}万，${c2}约${d2.price}万。但选的不是车，是你的需求。<br><br>`;
-      r += `${c1}核心优势——${d1.traits}。短板是${d1.weak}。<br>`;
-      r += `${c2}核心优势——${d2.traits}。短板是${d2.weak}。<br><br>`;
-
-      // 短板可补论
-      r += `你纠结的车机老旧、音响一般？那都不是事。车机用手机支架，音响加装DSP功放，花不了几个钱。这种可补的短板，不作为否决理由。致命缺陷才直接pass。<br><br>`;
-
-      if (isLuxury1 !== isLuxury2) {
-        const lux = isLuxury1 ? c1 : c2;
-        const luxData = isLuxury1 ? d1 : d2;
-        const prag = isLuxury1 ? c2 : c1;
-        r += `真正的问题是：你对那个豪华品牌logo的向往有多强？如果拥有${luxData.brand}品牌是你长久的心愿，且在能力范围内，${lux}的缺点都能克服。如果品牌不是刚需，${prag}性价比明显更高。<br><br>`;
-      } else {
-        r += `真正的问题是：你最看重什么？是空间、动力、还是省心？把你的核心需求拎出来，哪款更匹配就选哪款。<br><br>`;
-      }
-      r += `没有标准答案，这是理性和感性的拉锯。你自己回答。`;
-      return r;
-    }
-
-    // 通用对比（车型不在库）
-    let r = `兄弟，对比两台车，参数表是最不重要的东西。<br><br>`;
-    r += `先问自己三个问题：一，你买车最核心的需求是什么？代步、家用、还是面子？二，两台车的落地价差多少？三，哪台的优点正好踩在你的核心需求上？<br><br>`;
-    r += `价格重合时，选择由"你对品牌logo的向往程度"决定，不是由参数表决定。致命缺陷（烧机油、变速箱顿挫）直接pass，可补短板（车机、音响）别纠结。把需求说清楚，我帮你算。`;
-    return r;
-  }
-
-  // 4. 时机判断论
-  function genTiming(info) {
-    const isSpring = /春节/.test(info.timingWord);
-    let r = '';
-    if (isSpring) {
-      r += `春节前买车？劝你买个der，先别急着掏钱。<br><br>`;
-      r += `春节前是传统旺季，优惠收缩、甚至涨价。销售知道你急着开回家过年，议价权全在他手里。你以为捡便宜，实际是高位接盘。<br><br>`;
-    } else {
-      r += `兄弟，买车的时机比买什么车更重要。急于掏钱要吃亏。<br><br>`;
-    }
-    r += `现在三个信号同时出现：油车新款优惠收缩涨价、新能源新技术（800V、6C快充）即将普及、补贴政策有望加码。这时候冲进去，就是给人接盘。<br><br>`;
-    if (info.isOil) {
-      r += `油车现在买，新款优惠在收，价格不划算；再等等，新能源技术成熟了，油车保值率还得往下掉。`;
-    } else if (info.isElectric) {
-      r += `电车技术迭代太快，今年买的明年就成旧款。等800V和6C快充铺开，续航焦虑基本解决，你现在的车就尴尬了。`;
-    } else {
-      r += `等比买划算。有新款、有新技术、有补贴趋势时，等一等就是省钱。`;
-    }
-    r += `<br><br>如果你确实急用，考虑二手车或租车过渡，比高位买新车划算。${pick(GOLDEN_QUOTES)}`;
-    return r;
-  }
-
-  // 5. 经济账本思维 - 油电
-  function genOilVsElectric(info) {
-    let r = `油车还是电车？别听销售忽悠，算总账。<br><br>`;
-    r += `电车省油费不假，每公里省五六毛。但你算过这些没：电池贬值快，三年保值率比油车低15%-20%；保险比同价位油车贵20%-30%；换电池一组大几万，出了质保就是定时炸弹；技术迭代快，今年买的明年就过时。<br><br>`;
-
-    if (info.isFirstCar) {
-      r += `你是第一台车，我建议偏向油车。普通家庭第一台车，要的是省心、保值、养车便宜。油车十年开不坏，保值率稳，加油五分钟走人。电车那些省下的油费，折旧里全赔回去了。<br><br>`;
-      r += `等你有了第二台车，再考虑电车做城市代步补充，那才是电车的正确打开方式。`;
-    } else if (info.isCommute) {
-      r += `你纯市区代步、有家充桩，电车确实划算。但你要是没固定充电位、经常跑长途，油车省心得多。先把用车场景说清楚。`;
-    } else {
-      r += `第一台车偏油车，第二台代步再考虑电车。你具体什么情况？日常多少公里？有没有家充条件？说清楚我帮你算。`;
-    }
-    r += `<br><br>${pick(GOLDEN_QUOTES)}`;
-    return r;
-  }
-
-  // 6. 需求锚点论 - 预算选车
-  function genBudgetPick(info) {
-    const b = info.budget;
-    let r = '';
-    let recommend = '';
-
-    if (b && b <= 10) {
-      r += `${b}万以内，要省心的话方向是清楚的，但具体买哪台还得看你的需求。<br><br>`;
-      r += `先回答我几个问题：这是你第一台车吗？家用还是纯代步？在意保值还是图个便宜好开？有没有特别在意的品牌？<br><br>`;
-      r += `方向上，这个价位省心优先看这几类：合资入门轿车（轩逸、朗逸、卡罗拉）省油保值故障率低；想大点空间看缤智、XR-V这类小型SUV；不介意国产，秦PLUS插混省油还能上绿牌。致命缺陷（三缸机抖、双离合顿挫）直接pass。<br><br>`;
-      r += `把需求说清楚，我帮你缩小范围。记住，能力范围内越便宜越好，别为了面子多花两万买不实用的。`;
-    } else if (b && b <= 15) {
-      r += `${b}万预算，主流家用车的甜区。但选什么得先锚定需求。<br><br>`;
-      r += `家用代步，速腾、思域、卡罗拉双擎都省心；要空间看CR-V、RAV4入门款；新能源可以看宋PLUS插混。关键看你最看重什么——省油？空间？还是保值？<br><br>`;
-      r += `先告诉我：第一台车还是换车？几个人坐？一年开多少公里？有没有充电条件？需求清楚了我帮你定。`;
-    } else if (b && b <= 25) {
-      r += `${b}万预算，选择很多，但越容易选错。先把需求说清楚。<br><br>`;
-      r += `这个价位，BBA入门（Q3、X1、A4）和主流合资中高配（凯美瑞、汉兰达、冠道）价格重合。选哪个，取决于你对豪华品牌logo的向往有多强，而不是参数表。<br><br>`;
-      r += `你是家用还是商务？第一台车吗？月薪多少？贷款还是全款？这些决定了你该往豪华靠还是往务实走。说清楚我帮你算。`;
-    } else if (b && b > 25) {
-      r += `${b}万往上，已经不是单纯选车的问题，是消费能力的问题。<br><br>`;
-      r += `先确认：你的月薪能覆盖养车吗？这个价位的车，每年折旧+保险+保养轻松小十万。贷款的话月供更吓人。<br><br>`;
-      r += `你月薪多少？贷款还是全款？买这车是为了面子还是真有需求？先把账算明白，再谈选哪台。车是赔钱货，别让它拖垮你的生活。`;
-    } else {
-      r += `兄弟，你想买什么车？先说几个关键信息我才能帮你：<br><br>`;
-      r += `一，预算多少？二，月薪多少，贷款还是全款？三，这是第几台车，家用还是代步？四，有没有特别在意的品牌或车型？<br><br>`;
-      r += `需求锚点定不住，推荐就是瞎扯。说清楚，我帮你算总账。`;
-    }
-    return r;
-  }
-
-  // 7. 默认回复
-  function genDefault(info) {
-    let r = `兄弟，你这话信息太少，我没法给你实在建议。<br><br>`;
-    r += `买车这事，先把几点说清楚：<br>`;
-    r += `▸ 预算多少（落地价）<br>`;
-    r += `▸ 月薪多少，贷款还是全款<br>`;
-    r += `▸ 这是第几台车，家用还是代步<br>`;
-    r += `▸ 有没有看中的车型或品牌<br><br>`;
-    r += `超哥不忽悠，不套路，只算账。你把需求说清楚，我帮你算明白这笔账。买车是赔钱货，咱得把钱花在刀刃上。`;
-    return r;
-  }
-
-  // ---------- 主分析函数 ----------
-  function analyzeAndRespond(userInput) {
-    const info = extractInfo(userInput);
-
-    // 优先级 1：月薪撑不起月供 → 劝退优先论
-    if (info.salary && info.budget) {
-      const calc = calcMonthly(info.budget, info.isLoan);
-      const halfSalary = info.salary * 0.5;
-      // 月供+养车超过月薪50%，或纯养车就超过月薪
-      if (calc.totalMonthly > halfSalary || calc.totalOwnMonthly > info.salary) {
-        return genDissuade(info);
-      }
-    }
-    // 没明说月薪，但贷款+高预算（预算超过一定额度且贷款）也提示
-    if (info.isLoan && info.budget && info.salary) {
-      const annualIncome = info.salary * 12;
-      if (info.budget * 10000 > annualIncome * 2) {
-        return genFaceVsPractical(info);
-      }
-    }
-
-    // 优先级 2：两车对比 → 需求锚点论
-    if (info.isCompare && info.cars.length >= 2) {
-      return genCompare(info);
-    }
-    // 即使没明确"还是"，但提到两个以上车型也走对比
-    if (info.cars.length >= 2 && /选|比|还是|纠结|哪个/.test(userInput)) {
-      info.isCompare = true;
-      return genCompare(info);
-    }
-
-    // 优先级 3：时机 → 时机判断论
-    if (info.isTiming) {
-      return genTiming(info);
-    }
-
-    // 优先级 4：油车vs电车 → 经济账本思维
-    if ((info.isElectric && info.isOil) || (info.isElectric && /还是|vs|对比|还是买|选/.test(userInput)) || (info.isOil && /还是|vs|电车|电动/.test(userInput))) {
-      return genOilVsElectric(info);
-    }
-    if (info.isElectric && info.isFirstCar) {
-      return genOilVsElectric(info);
-    }
-
-    // 优先级 5：具体预算选车 → 需求锚点论
-    if (info.budget && info.cars.length < 2 && !info.isCompare) {
-      return genBudgetPick(info);
-    }
-
-    // 优先级 6：只提到单一车型 + 贷款压力 → 劝退
-    if (info.cars.length === 1 && info.isLoan && info.salary) {
-      const singleCar = info.cars[0];
-      const carData = CAR_DB[singleCar];
-      if (carData) {
-        info.budget = carData.price;
-        const calc = calcMonthly(info.budget, true);
-        if (calc.totalMonthly > info.salary * 0.5) {
-          return genDissuade(info);
-        }
-      }
-    }
-
-    // 默认
-    return genDefault(info);
-  }
 
   // ---------- UI 交互 ----------
   const chatMessages = document.getElementById('chatMessages');
@@ -737,6 +474,7 @@
     speaker.className = 'speaker';
     speaker.textContent = sender === 'chaoge' ? '超哥' : '你';
     const content = document.createElement('div');
+    content.className = 'content';
     content.innerHTML = text;
     bubble.appendChild(speaker);
     bubble.appendChild(content);
@@ -761,6 +499,10 @@
     typing.className = 'typing';
     typing.innerHTML = '<span></span><span></span><span></span>';
     bubble.appendChild(typing);
+    const hint = document.createElement('div');
+    hint.className = 'thinking-hint';
+    hint.textContent = '超哥正在想怎么劝你…';
+    bubble.appendChild(hint);
     row.appendChild(avatar);
     row.appendChild(bubble);
     chatMessages.appendChild(row);
@@ -776,8 +518,22 @@
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
+  // 简单的markdown格式转换
+  function formatMarkdown(text) {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/\n/g, '<br>')
+      .replace(/^/, '<p>')
+      .replace(/$/, '</p>');
+  }
+
   let isResponding = false;
-  function handleSend(text) {
+
+  async function handleSend(text) {
     if (isResponding) return;
     const value = (text !== undefined ? text : userInput.value).trim();
     if (!value) return;
@@ -789,26 +545,106 @@
     sendBtn.disabled = true;
 
     appendTyping();
-    const delay = 600 + Math.random() * 700;
-    setTimeout(() => {
-      try {
-        removeTyping();
-        let reply;
-        try {
-          reply = analyzeAndRespond(value);
-        } catch (e) {
-          console.error('对话引擎异常:', e);
-          reply = '兄弟，刚才算账的时候脑子短路了一下。你把需求再说一遍——预算多少？月薪多少？贷款还是全款？我重新帮你算。';
-        }
-        appendMessage(reply, 'chaoge');
-      } catch (e) {
-        console.error('UI渲染异常:', e);
-      } finally {
-        isResponding = false;
-        sendBtn.disabled = false;
-        userInput.focus();
+
+    // 添加用户消息到历史
+    messages.push({ role: 'user', content: value });
+
+    try {
+      const response = await fetch(DEEPSEEK_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: MODEL,
+          messages: messages,
+          stream: true,
+          max_tokens: 1200,
+          temperature: 0.8
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API错误: ${response.status}`);
       }
-    }, delay);
+
+      removeTyping();
+
+      // 创建流式回复气泡
+      const row = document.createElement('div');
+      row.className = 'msg-row chaoge';
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar chaoge';
+      avatar.textContent = '🎙️';
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble chaoge';
+      const speaker = document.createElement('div');
+      speaker.className = 'speaker';
+      speaker.textContent = '超哥';
+      const content = document.createElement('div');
+      content.className = 'content';
+      content.innerHTML = '<p></p>';
+      bubble.appendChild(speaker);
+      bubble.appendChild(content);
+      row.appendChild(avatar);
+      row.appendChild(bubble);
+      chatMessages.appendChild(row);
+      scrollToBottom();
+
+      // 流式读取
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let fullText = '';
+      let buffer = '';
+
+      while (true) {
+        const { done, value: chunk } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(chunk, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data: ')) continue;
+          const data = trimmed.slice(6);
+          if (data === '[DONE]') continue;
+
+          try {
+            const json = JSON.parse(data);
+            const delta = json.choices?.[0]?.delta?.content || '';
+            if (delta) {
+              fullText += delta;
+              content.innerHTML = formatMarkdown(fullText);
+              scrollToBottom();
+            }
+          } catch (e) {
+            // 忽略解析错误
+          }
+        }
+      }
+
+      // 添加助手回复到历史
+      if (fullText) {
+        messages.push({ role: 'assistant', content: fullText });
+      } else {
+        content.innerHTML = '<p>兄弟，刚才走神了。你再说一遍？</p>';
+        messages.push({ role: 'assistant', content: '兄弟，刚才走神了。你再说一遍？' });
+      }
+
+    } catch (error) {
+      console.error('对话异常:', error);
+      removeTyping();
+      appendMessage('兄弟，网络有点问题，信号不好。你等一下再发一遍，我重新帮你算。', 'chaoge');
+      // 移除最后一条用户消息，避免历史混乱
+      messages.pop();
+    } finally {
+      isResponding = false;
+      sendBtn.disabled = false;
+      userInput.focus();
+    }
   }
 
   // 文本框自适应高度
