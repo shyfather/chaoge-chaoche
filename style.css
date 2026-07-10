@@ -1,0 +1,66 @@
+/* ===== 超哥超车 · 共享样式 ===== */
+@font-face { font-family:'BricolageGrotesque'; src:url('./_shared/fonts/BricolageGrotesque-Regular.ttf') format('truetype'); font-weight:400; }
+@font-face { font-family:'BricolageGrotesque'; src:url('./_shared/fonts/BricolageGrotesque-Bold.ttf') format('truetype'); font-weight:700; }
+@font-face { font-family:'IBMPlexMono'; src:url('./_shared/fonts/IBMPlexMono-Regular.ttf') format('truetype'); font-weight:400; }
+
+:root {
+  --bg:#0f1115; --bg2:#1a1d24; --bg3:#22262f; --ink:#e8e8e8; --muted:#8a8f9a;
+  --rule:#2a2e36; --accent:#ff6b35; --accent2:#4ecdc4; --accent3:#f7c948;
+  --font:'BricolageGrotesque',system-ui,sans-serif; --font-mono:'IBMPlexMono',monospace;
+  --max:1000px; --radius:12px;
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html { font-size:16px; scroll-behavior:smooth; }
+body { font-family:var(--font); color:var(--ink); background:var(--bg); line-height:1.75; -webkit-font-smoothing:antialiased; }
+
+/* Nav */
+.nav { position:sticky; top:0; z-index:100; background:rgba(15,17,21,0.92); backdrop-filter:blur(12px); border-bottom:1px solid var(--rule); }
+.nav-inner { max-width:var(--max); margin:0 auto; padding:0.8rem 1.5rem; display:flex; align-items:center; justify-content:space-between; }
+.nav-brand { font-size:1.15rem; font-weight:700; color:var(--ink); text-decoration:none; }
+.nav-brand .accent { color:var(--accent); }
+.nav-links { display:flex; gap:0.3rem; flex-wrap:wrap; }
+.nav-links a { color:var(--muted); text-decoration:none; font-size:0.88rem; padding:0.4rem 0.8rem; border-radius:8px; transition:all 0.2s; }
+.nav-links a:hover { color:var(--ink); background:var(--bg2); }
+.nav-links a.active { color:var(--accent); background:rgba(255,107,53,0.1); }
+@media(max-width:600px){ .nav-links{ gap:0.1rem; } .nav-links a{ font-size:0.78rem; padding:0.3rem 0.5rem; } }
+
+/* Layout */
+.page { max-width:var(--max); margin:0 auto; padding:0 1.5rem; }
+section { padding:3rem 0; border-bottom:1px solid var(--rule); }
+section:last-of-type { border-bottom:none; }
+
+/* Typography */
+h2 { font-size:1.6rem; font-weight:700; margin-bottom:1.5rem; display:flex; align-items:center; gap:0.6rem; letter-spacing:-0.01em; }
+h2 .num { font-family:var(--font-mono); font-size:0.85rem; color:var(--accent); font-weight:400; }
+h3 { font-size:1.1rem; font-weight:700; color:var(--accent2); margin-top:1.5rem; margin-bottom:0.6rem; }
+p { margin-bottom:1rem; }
+mark.key { background:none; color:var(--accent); font-weight:600; }
+a { color:var(--accent2); }
+
+/* Cards */
+.card { background:var(--bg2); border-radius:var(--radius); padding:1.5rem; transition:transform 0.2s; }
+.card:hover { transform:translateY(-2px); }
+
+/* Buttons */
+.btn { display:inline-block; padding:0.7rem 1.5rem; border-radius:8px; font-weight:700; font-size:0.95rem; text-decoration:none; transition:all 0.2s; border:none; cursor:pointer; font-family:var(--font); }
+.btn-primary { background:var(--accent); color:#fff; }
+.btn-primary:hover { background:#e85a2a; transform:translateY(-1px); }
+.btn-outline { background:transparent; color:var(--accent2); border:1px solid var(--accent2); }
+.btn-outline:hover { background:rgba(78,205,196,0.1); }
+
+/* Grid */
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; }
+.grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1.2rem; }
+@media(max-width:700px){ .grid-2,.grid-3{ grid-template-columns:1fr; } }
+
+/* Footer */
+footer { padding:2rem 0 3rem; text-align:center; }
+footer .trust { font-style:italic; color:var(--muted); font-size:0.9rem; margin-bottom:1.5rem; padding:1rem; border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); }
+
+/* Code/Mono */
+.mono { font-family:var(--font-mono); }
+.label-tag { display:inline-block; font-family:var(--font-mono); font-size:0.7rem; color:var(--accent); border:1px solid var(--accent); padding:0.2rem 0.6rem; border-radius:20px; letter-spacing:0.05em; text-transform:uppercase; }
+
+/* Animations */
+@keyframes fadeUp { from{ opacity:0; transform:translateY(20px); } to{ opacity:1; transform:translateY(0); } }
+.fade-up { animation:fadeUp 0.5s ease-out; }
