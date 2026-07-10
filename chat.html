@@ -508,7 +508,7 @@
     const ratio = Math.round(calc.totalMonthly / info.salary * 100);
     const affordable = info.salary * 0.5;
 
-    let r = `兄弟，先别想${carName}了。${pick(CATCHPHRASE)}，先听我算笔账。<br><br>`;
+    let r = `兄弟，先别想${carName}了。${pick(CATCHPHRASES)}，先听我算笔账。<br><br>`;
     r += `${info.budget}万的车，落地得${calc.onRoad}万。`;
     if (info.isLoan) {
       r += `贷款70%分3年，月供${calc.monthlyPayment}。`;
@@ -791,11 +791,23 @@
     appendTyping();
     const delay = 600 + Math.random() * 700;
     setTimeout(() => {
-      removeTyping();
-      const reply = analyzeAndRespond(value);
-      appendMessage(reply, 'chaoge');
-      isResponding = false;
-      sendBtn.disabled = false;
+      try {
+        removeTyping();
+        let reply;
+        try {
+          reply = analyzeAndRespond(value);
+        } catch (e) {
+          console.error('对话引擎异常:', e);
+          reply = '兄弟，刚才算账的时候脑子短路了一下。你把需求再说一遍——预算多少？月薪多少？贷款还是全款？我重新帮你算。';
+        }
+        appendMessage(reply, 'chaoge');
+      } catch (e) {
+        console.error('UI渲染异常:', e);
+      } finally {
+        isResponding = false;
+        sendBtn.disabled = false;
+        userInput.focus();
+      }
     }, delay);
   }
 
