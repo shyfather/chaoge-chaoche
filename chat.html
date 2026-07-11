@@ -9,7 +9,7 @@
   <style>
     /* ===== 页面专属样式 ===== */
     .page-header {
-      background: linear-gradient(135deg, #1a1d24 0%, #0f1115 100%);
+      background: linear-gradient(135deg, var(--bg2) 0%, var(--bg) 100%);
       padding: 3.5rem 1.5rem 2.5rem;
       text-align: center;
       border-bottom: 1px solid var(--rule);
@@ -23,7 +23,7 @@
       left: -10%;
       width: 120%;
       height: 200%;
-      background: radial-gradient(ellipse at center, rgba(255,107,53,0.10) 0%, transparent 60%);
+      background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 10%, transparent) 0%, transparent 60%);
       pointer-events: none;
     }
     .page-header .label-tag { position: relative; margin-bottom: 1rem; }
@@ -106,12 +106,12 @@
       font-weight: 700;
     }
     .avatar.chaoge {
-      background: rgba(255,107,53,0.15);
+      background: color-mix(in srgb, var(--accent) 15%, transparent);
       border: 1px solid var(--accent);
       color: var(--accent);
     }
     .avatar.user {
-      background: rgba(78,205,196,0.12);
+      background: color-mix(in srgb, var(--accent2) 12%, transparent);
       border: 1px solid var(--accent2);
       color: var(--accent2);
       font-size: 0.85rem;
@@ -126,14 +126,14 @@
       word-break: break-word;
     }
     .bubble.chaoge {
-      background: rgba(255,107,53,0.08);
+      background: color-mix(in srgb, var(--accent) 8%, transparent);
       border-left: 3px solid var(--accent);
       border-top-left-radius: 4px;
       color: var(--ink);
     }
     .bubble.user {
-      background: rgba(78,205,196,0.12);
-      border: 1px solid rgba(78,205,196,0.25);
+      background: color-mix(in srgb, var(--accent2) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent2) 25%, transparent);
       border-top-right-radius: 4px;
       color: var(--ink);
     }
@@ -186,7 +186,7 @@
       flex-shrink: 0;
       background: transparent;
       color: var(--accent2);
-      border: 1px solid rgba(78,205,196,0.4);
+      border: 1px solid color-mix(in srgb, var(--accent2) 40%, transparent);
       padding: 0.5rem 0.9rem;
       border-radius: 20px;
       font-size: 0.82rem;
@@ -196,7 +196,7 @@
       white-space: nowrap;
     }
     .quick-btn:hover {
-      background: rgba(78,205,196,0.12);
+      background: color-mix(in srgb, var(--accent2) 12%, transparent);
       border-color: var(--accent2);
       transform: translateY(-1px);
     }
@@ -252,7 +252,7 @@
       align-items: center;
       gap: 0.35rem;
     }
-    .send-btn:hover { background: #e85a2a; transform: translateY(-1px); }
+    .send-btn:hover { background: color-mix(in srgb, var(--accent) 85%, #000); transform: translateY(-1px); }
     .send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
     /* ===== 底部提示 ===== */
