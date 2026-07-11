@@ -15,7 +15,7 @@
       overflow: hidden;
       padding: 5.5rem 1.5rem 4.5rem;
       text-align: center;
-      background: radial-gradient(ellipse at 50% 0%, #1f2128 0%, #13151b 55%, #0f1115 100%);
+      background: radial-gradient(ellipse at 50% 0%, var(--bg2) 0%, var(--bg) 55%, var(--bg) 100%);
       border-bottom: 1px solid var(--rule);
     }
     .hero::before {
@@ -26,7 +26,7 @@
       transform: translateX(-50%);
       width: 90%;
       height: 130%;
-      background: radial-gradient(ellipse at center, rgba(255,107,53,0.22) 0%, rgba(255,107,53,0.07) 35%, transparent 65%);
+      background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 22%, transparent) 0%, color-mix(in srgb, var(--accent) 7%, transparent) 35%, transparent 65%);
       filter: blur(20px);
       pointer-events: none;
     }
@@ -39,7 +39,7 @@
       height: 340px;
       max-width: 60vw;
       max-height: 60vw;
-      background: radial-gradient(circle, rgba(78,205,196,0.10) 0%, transparent 60%);
+      background: radial-gradient(circle, color-mix(in srgb, var(--accent2) 10%, transparent) 0%, transparent 60%);
       filter: blur(30px);
       pointer-events: none;
     }
@@ -49,8 +49,8 @@
       font-family: var(--font-mono);
       font-size: 0.74rem;
       color: var(--accent);
-      border: 1px solid rgba(255,107,53,0.5);
-      background: rgba(255,107,53,0.06);
+      border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+      background: color-mix(in srgb, var(--accent) 6%, transparent);
       padding: 0.32rem 0.85rem;
       border-radius: 20px;
       margin-bottom: 1.6rem;
@@ -124,7 +124,7 @@
     }
     .stat-card:hover {
       transform: translateY(-3px);
-      border-color: rgba(255,107,53,0.4);
+      border-color: color-mix(in srgb, var(--accent) 40%, transparent);
       background: #1d2027;
     }
     .stat-num {
@@ -198,7 +198,7 @@
     .cta {
       text-align: center;
       padding: 4rem 1.5rem !important;
-      background: radial-gradient(ellipse at 50% 50%, rgba(255,107,53,0.08) 0%, transparent 70%);
+      background: radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 70%);
     }
     .cta h2 { justify-content: center; }
     .cta-btn {
@@ -211,9 +211,9 @@
       font-size: 1.15rem;
       text-decoration: none;
       transition: all 0.2s;
-      box-shadow: 0 6px 20px rgba(255,107,53,0.3);
+      box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 30%, transparent);
     }
-    .cta-btn:hover { background:#e85a2a; transform:translateY(-2px); box-shadow:0 10px 28px rgba(255,107,53,0.4); }
+    .cta-btn:hover { background: color-mix(in srgb, var(--accent) 85%, #000); transform:translateY(-2px); box-shadow:0 10px 28px color-mix(in srgb, var(--accent) 40%, transparent); }
     .cta-sub { margin-top: 1rem; color: var(--muted); font-size: 0.95rem; }
 
     footer .copyright { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
