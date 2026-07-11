@@ -23,7 +23,7 @@
       left: -10%;
       width: 120%;
       height: 220%;
-      background: radial-gradient(ellipse at center, rgba(255,107,53,0.07) 0%, transparent 60%);
+      background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 7%, transparent) 0%, transparent 60%);
       pointer-events: none;
     }
     .page-hero .label-tag { margin-bottom: 1.3rem; }
@@ -101,7 +101,7 @@
       color: var(--accent2);
       line-height: 1.6;
       padding: 0.7rem 1rem;
-      background: rgba(78,205,196,0.06);
+      background: color-mix(in srgb, var(--accent2) 6%, transparent);
       border-radius: 8px;
       margin-bottom: 1.5rem;
     }
@@ -171,11 +171,11 @@
     }
     .demo .user-msg:last-child, .demo .chaoge-msg:last-child { margin-bottom: 0; }
     .demo .user-msg {
-      background: rgba(78,205,196,0.1);
+      background: color-mix(in srgb, var(--accent2) 10%, transparent);
       border-left: 3px solid var(--accent2);
     }
     .demo .chaoge-msg {
-      background: rgba(255,107,53,0.08);
+      background: color-mix(in srgb, var(--accent) 8%, transparent);
       border-left: 3px solid var(--accent);
     }
     .demo .speaker {
@@ -233,7 +233,7 @@
       transition: all 0.2s;
     }
     .boundary-card .boundary-link:hover {
-      background: rgba(78,205,196,0.1);
+      background: color-mix(in srgb, var(--accent2) 10%, transparent);
     }
 
     /* CTA 区 */
