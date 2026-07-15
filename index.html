@@ -125,7 +125,7 @@
     .stat-card:hover {
       transform: translateY(-3px);
       border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-      background: #1d2027;
+      background: var(--hover-bg);
     }
     .stat-num {
       font-size: clamp(1.5rem, 4vw, 2.1rem);
@@ -165,7 +165,7 @@
     .model-card:hover {
       transform: translateY(-4px);
       border-top-color: var(--accent2);
-      background: #1d2027;
+      background: var(--hover-bg);
       box-shadow: 0 8px 24px rgba(0,0,0,0.3);
     }
     .model-card .icon { font-size: 1.7rem; line-height: 1; margin-bottom: 0.7rem; }
@@ -275,7 +275,7 @@
   <div class="hero">
     <div class="hero-inner">
       <span class="hero-tag fade-up">劝退式买车思维视角</span>
-      <h1 class="fade-up d1">超哥<span class="accent">超车</span></h1>
+      <h1 class="fade-up d1">超哥<span class="gradient-text">超车</span></h1>
       <p class="hero-sub fade-up d2">劝退式买车思维视角</p>
       <p class="hero-quote fade-up d3">劝你买个der。买错车一年亏10万，你觉得现在急着买划算吗？</p>
       <div class="hero-meta fade-up d4">
@@ -397,6 +397,13 @@ document.addEventListener('click', function(e) {
   var saved = localStorage.getItem('chaoge-theme') || 'dark';
   setTheme(saved);
 })();
+</script>
+
+<script>
+window.addEventListener('scroll', function() {
+  var nav = document.querySelector('.nav');
+  if (nav) nav.classList.toggle('scrolled', window.scrollY > 10);
+}, { passive: true });
 </script>
 
 </body>
