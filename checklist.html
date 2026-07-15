@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>买车检查清单 · 超哥超车</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ===== checklist.html 页面专属样式 ===== */
+
+    /* 页面标题区 */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 5rem 1.5rem 4rem;
+      text-align: center;
+      background: radial-gradient(ellipse at 50% 0%, var(--bg2) 0%, var(--bg) 55%, var(--bg) 100%);
+      border-bottom: 1px solid var(--rule);
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      height: 140%;
+      background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 18%, transparent) 0%, color-mix(in srgb, var(--accent) 5%, transparent) 35%, transparent 65%);
+      filter: blur(20px);
+      pointer-events: none;
+    }
+    .hero-inner { position: relative; z-index: 1; max-width: var(--max); margin: 0 auto; }
+    .hero-tag {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--accent);
+      border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+      background: color-mix(in srgb, var(--accent) 6%, transparent);
+      padding: 0.32rem 0.85rem;
+      border-radius: 20px;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.08em;
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 6.5vw, 3.8rem);
+      font-weight: 700;
+      line-height: 1.08;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+    .hero h1 .accent { color: var(--accent); }
+    .hero-subtitle {
+      font-size: clamp(1rem, 2.4vw, 1.2rem);
+      color: var(--muted);
+      max-width: 620px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* 清单主区 */
+    .checklist-section { padding-top: 2.5rem; }
+
+    /* 阶段卡片 */
+    .phase-card {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 0;
+      transition: border-color 0.3s;
+    }
+    .phase-card + .phase-card { margin-top: 0; }
+    .phase-divider {
+      border: none;
+      border-top: 2px dashed var(--rule);
+      margin: 1.6rem 0;
+    }
+    .phase-header {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      margin-bottom: 1.3rem;
+    }
+    .phase-num {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+      background: var(--accent);
+      box-shadow: 0 3px 12px color-mix(in srgb, var(--accent) 35%, transparent);
+    }
+    .phase-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -0.01em;
+    }
+    .phase-meta {
+      margin-left: auto;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      padding: 0.22rem 0.65rem;
+      border-radius: 20px;
+      background: var(--bg3);
+      flex-shrink: 0;
+    }
+    .phase-meta .done { color: var(--accent2); }
+
+    /* 清单项列表 */
+    .check-list { list-style: none; padding: 0; margin: 0; }
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.85rem;
+      padding: 0.7rem 0.2rem;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+    .check-item:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+    .check-item + .check-item { border-top: 1px solid var(--rule); }
+
+    /* 自定义 checkbox */
+    .check-box {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: var(--bg3);
+      border: 1.5px solid var(--rule);
+      margin-top: 0.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+      position: relative;
+    }
+    .check-item.checked .check-box {
+      background: var(--accent);
+      border-color: var(--accent);
+      box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+    .check-box::after {
+      content: '';
+      width: 6px;
+      height: 11px;
+      border-right: 2.5px solid #fff;
+      border-bottom: 2.5px solid #fff;
+      transform: rotate(45deg) scale(0);
+      margin-top: -2px;
+      transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+      opacity: 0;
+    }
+    .check-item.checked .check-box::after {
+      transform: rotate(45deg) scale(1);
+      opacity: 1;
+    }
+
+    /* 文本内容 */
+    .check-text {
+      font-size: 0.95rem;
+      line-height: 1.65;
+      color: var(--ink);
+      transition: color 0.25s, text-decoration-color 0.25s;
+      flex: 1;
+    }
+    .check-text .idx {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-right: 0.4rem;
+    }
+    .check-item.checked .check-text {
+      color: var(--muted);
+      text-decoration: line-through;
+      text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent);
+    }
+    .check-item.checked .check-text .idx { color: color-mix(in srgb, var(--muted) 50%, transparent); }
+
+    /* 底部统计区 */
+    .stats-section {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 2rem 1.6rem;
+      text-align: center;
+      margin-top: 2.5rem;
+    }
+    .stats-label {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      margin-bottom: 0.6rem;
+    }
+    .stats-num {
+      font-family: var(--font-mono);
+      font-size: clamp(2rem, 6vw, 2.8rem);
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 1.2rem;
+    }
+    .stats-num .cur { color: var(--accent); }
+    .stats-num .sep { color: var(--muted); margin: 0 0.15em; }
+    .stats-num .total { color: var(--ink); }
+
+    /* 进度条 */
+    .progress-wrap {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .progress-track {
+      width: 100%;
+      height: 14px;
+      background: var(--bg3);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--rule);
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent3));
+      border-radius: 10px;
+      transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+      box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+    .progress-pct {
+      margin-top: 0.7rem;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--accent2);
+    }
+    .stats-msg {
+      margin-top: 1.1rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-style: italic;
+      min-height: 1.4em;
+    }
+
+    /* 底部 CTA */
+    .checklist-cta {
+      text-align: center;
+      padding: 3.5rem 1.5rem !important;
+      background: radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 70%);
+    }
+    .checklist-cta h2 { justify-content: center; }
+    .cta-quote {
+      font-size: clamp(1.1rem, 2.6vw, 1.35rem);
+      color: var(--ink);
+      font-style: italic;
+      margin-bottom: 1.6rem;
+      max-width: 560px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .cta-quote::before { content: '\201C'; color: var(--accent); font-weight: 700; }
+    .cta-quote::after { content: '\201D'; color: var(--accent); font-weight: 700; }
+    .cta-btn {
+      display: inline-block;
+      padding: 0.95rem 2.4rem;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.1rem;
+      text-decoration: none;
+      transition: all 0.2s;
+      box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 30%, transparent);
+    }
+    .cta-btn:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.1);
+      box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+    .cta-sub { margin-top: 1rem; color: var(--muted); font-size: 0.92rem; }
+
+    footer .copyright { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
+
+    /* fade-up */
+    .fade-up { opacity: 0; animation: fadeUp 0.6s ease-out forwards; }
+    .d1 { animation-delay: 0.05s; }
+    .d2 { animation-delay: 0.12s; }
+    .d3 { animation-delay: 0.19s; }
+
+    /* 移动端响应式 */
+    @media(max-width:600px){
+      .phase-card { padding: 1.2rem 1rem; }
+      .phase-header { gap: 0.6rem; }
+      .phase-num { width: 32px; height: 32px; font-size: 0.85rem; }
+      .phase-title { font-size: 1.05rem; }
+      .phase-meta { font-size: 0.68rem; padding: 0.18rem 0.5rem; }
+      .check-item { gap: 0.65rem; padding: 0.6rem 0.15rem; }
+      .check-box { width: 20px; height: 20px; }
+      .check-text { font-size: 0.9rem; }
+      .stats-section { padding: 1.5rem 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 导航栏 -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">超哥<span class="accent">超车</span></a>
+      <div class="nav-right">
+        <div class="nav-links">
+          <a href="index.html">首页</a>
+          <a href="models.html">模型</a>
+          <a href="calculator.html">算账器</a>
+          <a href="quotes.html">金句</a>
+          <a href="cases.html">案例</a>
+          <a href="checklist.html" class="active">清单</a>
+          <a href="compare.html">对比</a>
+          <a href="pitfalls.html">避坑</a>
+          <a href="recommend.html">推荐</a>
+          <a href="chat.html">在线</a>
+          <a href="about.html">画像</a>
+        </div>
+        <div class="theme-switch">
+          <button class="theme-btn" onclick="toggleThemeMenu()" title="切换主题">🎨</button>
+          <div class="theme-menu" id="themeMenu">
+            <button class="theme-option" data-theme="dark" onclick="setTheme('dark')"><span class="theme-swatch" style="background:#0f1115;border-color:#ff6b35"></span>暗夜橙</button>
+            <button class="theme-option" data-theme="light" onclick="setTheme('light')"><span class="theme-swatch" style="background:#f8f9fa;border-color:#ff6b35"></span>极简白</button>
+            <button class="theme-option" data-theme="forest" onclick="setTheme('forest')"><span class="theme-swatch" style="background:#0a1f1c;border-color:#52d4a8"></span>墨绿森林</button>
+            <button class="theme-option" data-theme="cyber" onclick="setTheme('cyber')"><span class="theme-swatch" style="background:#0d0b1a;border-color:#c026d3"></span>暗紫赛博</button>
+            <button class="theme-option" data-theme="paper" onclick="setTheme('paper')"><span class="theme-swatch" style="background:#1a1612;border-color:#e8a87c"></span>暖纸棕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 页面标题区 -->
+  <div class="hero">
+    <div class="hero-inner">
+      <span class="hero-tag fade-up">实用工具</span>
+      <h1 class="fade-up d1">买车<span class="accent">检查清单</span></h1>
+      <p class="hero-subtitle fade-up d2">从决策到提车，每一步都别马虎。照着清单走，不踩坑不后悔。</p>
+    </div>
+  </div>
+
+  <main class="page">
+
+    <!-- 清单主区 -->
+    <section class="checklist-section">
+
+      <!-- 第一阶段：买前自问 -->
+      <div class="phase-card">
+        <div class="phase-header">
+          <div class="phase-num">1</div>
+          <div class="phase-title">买前自问</div>
+          <div class="phase-meta" data-phase="0"><span class="done">0</span>/5</div>
+        </div>
+        <ul class="check-list">
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">01</span>我真的需要一辆车吗？公共交通能不能解决通勤？</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">02</span>买车后每月养车费用（保险+保养+油费+停车）占收入多少？超过30%就要三思。</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">03</span>有没有比买车更急迫的大额支出？（房贷、结婚、生育）</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">04</span>现在是最佳买车时机吗？有没有新款即将上市？有没有降价趋势？</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">05</span>买车的钱是存款还是贷款？贷款的话月供占收入多少？</span></li>
+        </ul>
+      </div>
+
+      <hr class="phase-divider">
+
+      <!-- 第二阶段：选车对比 -->
+      <div class="phase-card">
+        <div class="phase-header">
+          <div class="phase-num">2</div>
+          <div class="phase-title">选车对比</div>
+          <div class="phase-meta" data-phase="1"><span class="done">0</span>/6</div>
+        </div>
+        <ul class="check-list">
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">01</span>核心需求确认：省心？空间？面子？动力？省油？排个优先级。</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">02</span>候选车型锁定：不超过3款，太多选不过来。</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">03</span>落地价对比：不只是裸车价，算含税含保险的落地价。</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">04</span>10年总持有成本对比：用算账器算一遍。</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">05</span>致命缺陷排查：发动机/变速箱/底盘有没有硬伤？</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">06</span>保值率查询：3年/5年保值率多少？</span></li>
+        </ul>
+      </div>
+
+      <hr class="phase-divider">
+
+      <!-- 第三阶段：到店看车 -->
+      <div class="phase-card">
+        <div class="phase-header">
+          <div class="phase-num">3</div>
+          <div class="phase-title">到店看车</div>
+          <div class="phase-meta" data-phase="2"><span class="done">0</span>/7</div>
+        </div>
+        <ul class="check-list">
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">01</span>试驾！必须试驾！不开你怎么知道适不适合？</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">02</span>后排空间：坐3个人挤不挤？头部空间够不够？</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">03</span>后备箱：放得下婴儿车/行李箱吗？</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">04</span>NVH：关窗后隔音好不好？高速风噪大不大？</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">05</span>车机体验：导航好不好用？反应快不快？能不能手机互联？</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">06</span>视野：A柱盲区大不大？后视镜视野好不好？</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">07</span>配置确认：哪些是标配哪些要加钱？加装套餐值不值？</span></li>
+        </ul>
+      </div>
+
+      <hr class="phase-divider">
+
+      <!-- 第四阶段：谈价格 -->
+      <div class="phase-card">
+        <div class="phase-header">
+          <div class="phase-num">4</div>
+          <div class="phase-title">谈价格</div>
+          <div class="phase-meta" data-phase="3"><span class="done">0</span>/5</div>
+        </div>
+        <ul class="check-list">
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">01</span>货比三家：至少跑3家4S店，拿报价单对比。</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">02</span>落地价谈判：谈总价不谈优惠，防止装潢/保险/金融费暗加。</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">03</span>贷款方案对比：4S店金融vs银行贷款，算总利息不是月供。</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">04</span>赠品确认：贴膜、脚垫、行车记录仪——能要就要，但别为赠品多付钱。</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">05</span>合同逐条看：交车时间、订金退还条件、赠送项目写进合同。</span></li>
+        </ul>
+      </div>
+
+      <hr class="phase-divider">
+
+      <!-- 第五阶段：提车检查 -->
+      <div class="phase-card">
+        <div class="phase-header">
+          <div class="phase-num">5</div>
+          <div class="phase-title">提车检查</div>
+          <div class="phase-meta" data-phase="4"><span class="done">0</span>/6</div>
+        </div>
+        <ul class="check-list">
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">01</span>生产日期：铭牌上的生产日期，超过6个月就是库存车。</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">02</span>外观检查：漆面有没有划痕/色差？轮胎有没有磨损？</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">03</span>里程数：新车不超过50km，超过要问原因。</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">04</span>功能逐项测：灯光、雨刮、空调、车窗、天窗、座椅调节。</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">05</span>随车物品：三角牌、反光背心、备胎（或补胎液）、工具包、使用手册。</span></li>
+          <li class="check-item" onclick="toggleCheck(this)"><span class="check-box"></span><span class="check-text"><span class="idx">06</span>保险生效时间：确认保险即时生效，提车路上出事有保障。</span></li>
+        </ul>
+      </div>
+
+      <!-- 底部统计 -->
+      <div class="stats-section">
+        <div class="stats-label">完成进度</div>
+        <div class="stats-num">
+          <span class="cur" id="doneCount">0</span><span class="sep">/</span><span class="total">29</span>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-track">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <div class="progress-pct" id="progressPct">0%</div>
+        </div>
+        <div class="stats-msg" id="statsMsg">才刚开始，加油！</div>
+      </div>
+
+    </section>
+
+    <!-- CTA -->
+    <section class="checklist-cta">
+      <h2>还有疑问？问超哥</h2>
+      <p class="cta-quote">清单是死的，你的情况是活的。有拿不准的，直接问。</p>
+      <a class="cta-btn" href="chat.html">在线问超哥</a>
+      <p class="cta-sub">把你卡住的步骤告诉超哥，给你最实在的建议</p>
+    </section>
+
+  </main>
+
+  <!-- 底部 -->
+  <footer>
+    <p class="trust">买车是为生活服务，不是拖累生活。</p>
+    <p class="copyright">© 2026 超哥超车 · 劝退式买车思维视角 · 抖音 @超哥超车 cgcc666</p>
+  </footer>
+
+<script>
+// ===== 主题切换器 =====
+function setTheme(theme){
+  document.documentElement.setAttribute('data-theme',theme);
+  localStorage.setItem('chaoge-theme',theme);
+  document.querySelectorAll('.theme-option').forEach(o=>{
+    o.classList.toggle('active',o.dataset.theme===theme);
+  });
+  document.getElementById('themeMenu').classList.remove('open');
+}
+function toggleThemeMenu(){
+  document.getElementById('themeMenu').classList.toggle('open');
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.theme-switch')){
+    document.getElementById('themeMenu')?.classList.remove('open');
+  }
+});
+(function(){
+  var s=localStorage.getItem('chaoge-theme')||'dark';
+  setTheme(s);
+})();
+
+// ===== 清单交互逻辑 =====
+var TOTAL = 29;
+var STORAGE_KEY = 'chaoge-checklist';
+
+// 切换单项勾选状态
+function toggleCheck(el){
+  el.classList.toggle('checked');
+  saveState();
+  updateStats();
+}
+
+// 更新统计与进度条
+function updateStats(){
+  var allItems = document.querySelectorAll('.check-item');
+  var done = document.querySelectorAll('.check-item.checked').length;
+  var pct = Math.round((done / TOTAL) * 100);
+
+  // 更新总数
+  document.getElementById('doneCount').textContent = done;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressPct').textContent = pct + '%';
+
+  // 更新各阶段小计
+  var phases = document.querySelectorAll('.phase-card');
+  phases.forEach(function(phase, pi){
+    var items = phase.querySelectorAll('.check-item');
+    var phaseDone = phase.querySelectorAll('.check-item.checked').length;
+    var meta = phase.querySelector('.phase-meta .done');
+    if(meta) meta.textContent = phaseDone;
+  });
+
+  // 更新鼓励文案
+  var msg;
+  if(done === 0){
+    msg = '才刚开始，加油！';
+  } else if(done < 8){
+    msg = '有进展了，保持节奏。';
+  } else if(done < 16){
+    msg = '快过半了，别松懈。';
+  } else if(done < 24){
+    msg = '已经过半，胜利在望。';
+  } else if(done < TOTAL){
+    msg = '马上就全搞定了，坚持一下！';
+  } else {
+    msg = '全部完成！提车路上稳稳的，恭喜。';
+  }
+  document.getElementById('statsMsg').textContent = msg;
+}
+
+// 保存状态到 localStorage
+function saveState(){
+  var states = [];
+  document.querySelectorAll('.check-item').forEach(function(el){
+    states.push(el.classList.contains('checked'));
+  });
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(states));
+  }catch(e){}
+}
+
+// 从 localStorage 恢复状态
+function restoreState(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    var states = JSON.parse(raw);
+    var items = document.querySelectorAll('.check-item');
+    states.forEach(function(s, i){
+      if(s && items[i]) items[i].classList.add('checked');
+    });
+  }catch(e){}
+}
+
+// 初始化
+restoreState();
+updateStats();
+</script>
+
+</body>
+</html>
