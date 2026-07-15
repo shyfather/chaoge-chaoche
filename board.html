@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>留言板 · 超哥超车</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .page-header {
+      background: linear-gradient(135deg, var(--bg2) 0%, var(--bg) 100%);
+      padding: 3.5rem 1.5rem 2.5rem;
+      text-align: center;
+      border-bottom: 1px solid var(--rule);
+      position: relative;
+      overflow: hidden;
+    }
+    .page-header::before {
+      content: '';
+      position: absolute;
+      top: -60%;
+      left: -10%;
+      width: 120%;
+      height: 200%;
+      background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 10%, transparent) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .page-header .label-tag { position: relative; margin-bottom: 1rem; }
+    .page-header h1 {
+      position: relative;
+      font-size: clamp(1.8rem, 5vw, 2.8rem);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.8rem;
+    }
+    .page-header h1 .accent { color: var(--accent); }
+    .page-header .subtitle {
+      position: relative;
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 560px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ===== IP信息卡 ===== */
+    .ip-card {
+      max-width: var(--max);
+      margin: 1.5rem auto 0;
+      padding: 0 1.5rem;
+    }
+    .ip-info {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: 14px;
+      padding: 1.2rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .ip-info .ip-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--accent2) 15%, transparent);
+      border: 1px solid var(--accent2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+    .ip-info .ip-text {
+      flex: 1;
+      min-width: 200px;
+    }
+    .ip-info .ip-text .ip-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.2rem;
+    }
+    .ip-info .ip-text .ip-value {
+      font-family: var(--font-mono);
+      font-size: 1.05rem;
+      color: var(--accent2);
+      font-weight: 700;
+    }
+    .ip-info .ip-text .ip-loc {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 0.15rem;
+    }
+    .ip-info .ip-status {
+      font-size: 0.75rem;
+      color: var(--muted);
+      padding: 0.3rem 0.7rem;
+      border-radius: 20px;
+      background: var(--bg3);
+      white-space: nowrap;
+    }
+    .ip-info .ip-status.loaded {
+      color: var(--accent2);
+      background: color-mix(in srgb, var(--accent2) 12%, transparent);
+    }
+    .ip-info .ip-status.loading {
+      color: var(--accent3);
+      background: color-mix(in srgb, var(--accent3) 12%, transparent);
+    }
+
+    /* ===== 留言表单 ===== */
+    .board-page {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 1.5rem 1.5rem 0;
+    }
+    .msg-form {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: 14px;
+      padding: 1.3rem;
+      margin-bottom: 1.5rem;
+    }
+    .msg-form .form-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .msg-form .input-row {
+      display: flex;
+      gap: 0.7rem;
+      margin-bottom: 0.7rem;
+    }
+    .msg-form input[type="text"] {
+      flex: 0 0 140px;
+      background: var(--bg);
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      padding: 0.7rem 0.9rem;
+      color: var(--ink);
+      font-family: var(--font);
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+    }
+    .msg-form input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .msg-form input[type="text"]::placeholder { color: var(--muted); }
+    .msg-form textarea {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      padding: 0.7rem 0.9rem;
+      color: var(--ink);
+      font-family: var(--font);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      resize: vertical;
+      min-height: 80px;
+      transition: border-color 0.2s;
+    }
+    .msg-form textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .msg-form textarea::placeholder { color: var(--muted); }
+    .msg-form .form-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.7rem;
+    }
+    .msg-form .form-hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+      flex: 1;
+    }
+    .msg-form .submit-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 0.6rem 1.3rem;
+      font-family: var(--font);
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .msg-form .submit-btn:hover {
+      background: color-mix(in srgb, var(--accent) 85%, #000);
+      transform: translateY(-1px);
+    }
+    .msg-form .submit-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ===== 留言列表 ===== */
+    .msg-list-title {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .msg-list-title .count {
+      font-family: var(--font-mono);
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .msg-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      padding-bottom: 2rem;
+    }
+    .msg-item {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+      animation: fadeUp 0.3s ease-out;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .msg-item:hover {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+    }
+    .msg-item .msg-head {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.6rem;
+    }
+    .msg-item .msg-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .msg-item .msg-avatar.c1 { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border: 1px solid var(--accent); }
+    .msg-item .msg-avatar.c2 { background: color-mix(in srgb, var(--accent2) 15%, transparent); color: var(--accent2); border: 1px solid var(--accent2); }
+    .msg-item .msg-avatar.c3 { background: color-mix(in srgb, var(--accent3) 15%, transparent); color: var(--accent3); border: 1px solid var(--accent3); }
+    .msg-item .msg-meta {
+      flex: 1;
+      min-width: 0;
+    }
+    .msg-item .msg-name {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .msg-item .msg-info {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 0.1rem;
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .msg-item .msg-info .ip-tag {
+      color: var(--accent2);
+    }
+    .msg-item .msg-info .loc-tag {
+      color: var(--muted);
+    }
+    .msg-item .msg-info .time-tag {
+      color: var(--muted);
+    }
+    .msg-item .msg-body {
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: var(--ink);
+      word-break: break-word;
+    }
+    .msg-item .msg-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .msg-item .msg-actions button {
+      background: transparent;
+      border: 1px solid var(--rule);
+      color: var(--muted);
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font);
+    }
+    .msg-item .msg-actions button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .msg-item.is-mine {
+      border-left: 3px solid var(--accent);
+    }
+
+    /* 空状态 */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--muted);
+    }
+    .empty-state .empty-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.8rem;
+      opacity: 0.5;
+    }
+    .empty-state p {
+      font-size: 0.9rem;
+    }
+
+    /* 底部 */
+    .board-footer {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 1.5rem 1.5rem 3rem;
+      text-align: center;
+    }
+    .board-footer .tip {
+      font-style: italic;
+      color: var(--muted);
+      font-size: 0.85rem;
+      padding: 0.9rem 1rem;
+      border-top: 1px solid var(--rule);
+    }
+
+    @media (max-width: 600px) {
+      .page-header { padding: 2.5rem 1.2rem 2rem; }
+      .board-page { padding: 1rem 1rem 0; }
+      .ip-card { padding: 0 1rem; }
+      .msg-form .input-row { flex-direction: column; }
+      .msg-form input[type="text"] { flex: 1; }
+      .msg-item .msg-info { font-size: 0.65rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部导航 -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">超哥<span class="accent">超车</span></a>
+      <div class="nav-right">
+        <div class="nav-links">
+          <a href="index.html">首页</a>
+          <a href="models.html">模型</a>
+          <a href="calculator.html">算账器</a>
+          <a href="quotes.html">金句</a>
+          <a href="cases.html">案例</a>
+          <a href="checklist.html">清单</a>
+          <a href="compare.html">对比</a>
+          <a href="pitfalls.html">避坑</a>
+          <a href="recommend.html">推荐</a>
+          <a href="chat.html">在线</a>
+          <a href="board.html" class="active">留言</a>
+          <a href="about.html">画像</a>
+        </div>
+        <div class="theme-switch">
+          <button class="theme-btn" onclick="toggleThemeMenu()" title="切换主题">🎨</button>
+          <div class="theme-menu" id="themeMenu">
+            <button class="theme-option" data-theme="dark" onclick="setTheme('dark')"><span class="theme-swatch" style="background:#0f1115;border-color:#ff6b35"></span>暗夜橙</button>
+            <button class="theme-option" data-theme="light" onclick="setTheme('light')"><span class="theme-swatch" style="background:#f8f9fa;border-color:#ff6b35"></span>极简白</button>
+            <button class="theme-option" data-theme="forest" onclick="setTheme('forest')"><span class="theme-swatch" style="background:#0a1f1c;border-color:#52d4a8"></span>墨绿森林</button>
+            <button class="theme-option" data-theme="cyber" onclick="setTheme('cyber')"><span class="theme-swatch" style="background:#0d0b1a;border-color:#c026d3"></span>暗紫赛博</button>
+            <button class="theme-option" data-theme="paper" onclick="setTheme('paper')"><span class="theme-swatch" style="background:#1a1612;border-color:#e8a87c"></span>暖纸棕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 页面标题区 -->
+  <header class="page-header">
+    <span class="label-tag">车友交流</span>
+    <h1>车友<span class="accent">留言板</span></h1>
+    <p class="subtitle">说说你的买车故事、用车感受、或者问超哥一个问题。留言会显示你的IP归属地。</p>
+  </header>
+
+  <!-- IP信息卡 -->
+  <div class="ip-card">
+    <div class="ip-info">
+      <div class="ip-icon">🌐</div>
+      <div class="ip-text">
+        <div class="ip-label">你的IP地址</div>
+        <div class="ip-value" id="ipValue">获取中...</div>
+        <div class="ip-loc" id="ipLoc">正在定位...</div>
+      </div>
+      <div class="ip-status loading" id="ipStatus">定位中</div>
+    </div>
+  </div>
+
+  <!-- 留言区 -->
+  <main class="board-page">
+    <!-- 留言表单 -->
+    <div class="msg-form">
+      <div class="form-title">✏️ 发表留言</div>
+      <div class="input-row">
+        <input type="text" id="nickInput" placeholder="昵称（选填）" maxlength="20">
+        <textarea id="msgInput" placeholder="说点什么... 买车故事、用车感受、或者问问超哥" maxlength="500"></textarea>
+      </div>
+      <div class="form-bottom">
+        <div class="form-hint">留言将自动附带你的IP归属地。内容保存在本地浏览器中。</div>
+        <button class="submit-btn" id="submitBtn" onclick="submitMessage()">发布留言</button>
+      </div>
+    </div>
+
+    <!-- 留言列表 -->
+    <div class="msg-list-title">
+      💬 全部留言 <span class="count" id="msgCount">0</span> 条
+    </div>
+    <div class="msg-list" id="msgList"></div>
+  </main>
+
+  <!-- 底部 -->
+  <footer class="board-footer">
+    <p class="tip">留言保存在本地浏览器中，清除缓存或更换设备后不会保留。买车是为生活服务，不是拖累生活。</p>
+  </footer>
+
+  <script>
+  /* ============================================================
+     主题切换
+     ============================================================ */
+  function setTheme(theme){document.documentElement.setAttribute('data-theme',theme);localStorage.setItem('chaoge-theme',theme);document.querySelectorAll('.theme-option').forEach(o=>{o.classList.toggle('active',o.dataset.theme===theme)});document.getElementById('themeMenu').classList.remove('open')}
+  function toggleThemeMenu(){document.getElementById('themeMenu').classList.toggle('open')}
+  document.addEventListener('click',function(e){if(!e.target.closest('.theme-switch')){document.getElementById('themeMenu')?.classList.remove('open')}});
+  (function(){var s=localStorage.getItem('chaoge-theme')||'dark';setTheme(s)})();
+
+  /* ============================================================
+     留言板引擎
+     ============================================================ */
+  var STORAGE_KEY = 'chaoge_board_messages';
+  var visitorIP = '';
+  var visitorLoc = '';
+  var visitorIsp = '';
+
+  // 预填示例留言
+  var SEED_MESSAGES = [
+    {
+      id: 'seed_1',
+      nick: '老司机王哥',
+      ip: '120.231.x.x',
+      loc: '广东深圳',
+      isp: '中国电信',
+      content: '听了超哥的建议，没贷款硬上BBA，先买了辆卡罗拉代步。三年过去了，真香。等经济宽裕了再换也不迟。',
+      time: Date.now() - 86400000 * 3,
+      isMine: false
+    },
+    {
+      id: 'seed_2',
+      nick: '纠结的小李',
+      ip: '223.104.x.x',
+      loc: '浙江杭州',
+      isp: '中国移动',
+      content: '预算18万，在思域和速腾之间纠结了一个月。最后选了速腾，底盘确实稳，高速不飘。谢谢超哥的算账器，帮我算清了10年总成本。',
+      time: Date.now() - 86400000 * 1.5,
+      isMine: false
+    },
+    {
+      id: 'seed_3',
+      nick: '电车真香党',
+      ip: '36.110.x.x',
+      loc: '北京',
+      isp: '中国联通',
+      content: '第二台车买了海豚，城市代步真香。每公里1毛8，比坐地铁还便宜。但冬天续航确实缩水严重，超哥说得对，第一台车还是油车靠谱。',
+      time: Date.now() - 86400000 * 0.5,
+      isMine: false
+    }
+  ];
+
+  // 获取访客IP信息
+  async function fetchIP() {
+    var ipValueEl = document.getElementById('ipValue');
+    var ipLocEl = document.getElementById('ipLoc');
+    var ipStatusEl = document.getElementById('ipStatus');
+
+    try {
+      // 主API
+      var resp = await fetch('https://ipapi.co/json/');
+      if (!resp.ok) throw new Error('API 1 failed');
+      var data = await resp.json();
+
+      if (data.error) throw new Error(data.reason || 'API error');
+
+      visitorIP = data.ip || '未知';
+      var city = data.city || '';
+      var region = data.region || '';
+      var country = data.country_name || '';
+      visitorLoc = [country, region, city].filter(function(f) { return f; }).join(' ');
+      visitorIsp = data.org || '';
+
+      ipValueEl.textContent = visitorIP;
+      ipLocEl.textContent = '📍 ' + visitorLoc + (visitorIsp ? ' · ' + visitorIsp : '');
+      ipStatusEl.textContent = '已定位';
+      ipStatusEl.className = 'ip-status loaded';
+    } catch(e) {
+      // 备用API
+      try {
+        var resp2 = await fetch('https://ipinfo.io/json');
+        var data2 = await resp2.json();
+        visitorIP = data2.ip || '未知';
+        visitorLoc = [data2.country, data2.region, data2.city].filter(function(f) { return f; }).join(' ');
+        visitorIsp = data2.org || '';
+        ipValueEl.textContent = visitorIP;
+        ipLocEl.textContent = '📍 ' + visitorLoc + (visitorIsp ? ' · ' + visitorIsp : '');
+        ipStatusEl.textContent = '已定位';
+        ipStatusEl.className = 'ip-status loaded';
+      } catch(e2) {
+        ipValueEl.textContent = '获取失败';
+        ipLocEl.textContent = '无法获取IP信息，请检查网络';
+        ipStatusEl.textContent = '失败';
+        ipStatusEl.className = 'ip-status';
+      }
+    }
+  }
+
+  // 隐藏IP中间段（隐私保护）
+  function maskIP(ip) {
+    if (!ip || ip === '未知') return '未知';
+    var parts = ip.split('.');
+    if (parts.length === 4) {
+      return parts[0] + '.' + parts[1] + '.x.x';
+    }
+    return ip;
+  }
+
+  // 获取存储的留言
+  function getMessages() {
+    try {
+      var stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        var msgs = JSON.parse(stored);
+        // 合并示例留言（只在首次或用户留言少于3条时显示）
+        var userMsgs = msgs.filter(function(m) { return !m.isSeed; });
+        if (userMsgs.length === 0 && msgs.length === 0) {
+          return SEED_MESSAGES;
+        }
+        // 如果只有seed消息，加上预设的
+        var hasSeeds = msgs.some(function(m) { return m.isSeed; });
+        if (!hasSeeds && userMsgs.length < 3) {
+          return SEED_MESSAGES.concat(msgs);
+        }
+        return msgs;
+      }
+      return SEED_MESSAGES;
+    } catch(e) {
+      return SEED_MESSAGES;
+    }
+  }
+
+  // 保存留言
+  function saveMessages(messages) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    } catch(e) {
+      console.error('保存失败:', e);
+    }
+  }
+
+  // 格式化时间
+  function formatTime(timestamp) {
+    var now = Date.now();
+    var diff = now - timestamp;
+    if (diff < 60000) return '刚刚';
+    if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+    if (diff < 86400000 * 7) return Math.floor(diff / 86400000) + '天前';
+    var d = new Date(timestamp);
+    return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+  }
+
+  // 获取头像颜色
+  function getAvatarClass(nick) {
+    var colors = ['c1', 'c2', 'c3'];
+    var hash = 0;
+    for (var i = 0; i < nick.length; i++) {
+      hash = nick.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  }
+
+  // 获取头像文字
+  function getAvatarText(nick) {
+    if (!nick) return '匿';
+    return nick.charAt(0).toUpperCase();
+  }
+
+  // 渲染留言列表
+  function renderMessages() {
+    var messages = getMessages();
+    var listEl = document.getElementById('msgList');
+    var countEl = document.getElementById('msgCount');
+
+    countEl.textContent = messages.length;
+
+    if (messages.length === 0) {
+      listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><p>还没有留言，来说点什么吧</p></div>';
+      return;
+    }
+
+    // 按时间倒序
+    messages.sort(function(a, b) { return b.time - a.time; });
+
+    var html = '';
+    for (var i = 0; i < messages.length; i++) {
+      var msg = messages[i];
+      var avatarClass = getAvatarClass(msg.nick || '匿名');
+      var avatarText = getAvatarText(msg.nick);
+      var ipDisplay = msg.ip ? maskIP(msg.ip) : '未知';
+      var locDisplay = msg.loc || '未知';
+      var timeDisplay = formatTime(msg.time);
+      var isMineClass = msg.isMine ? ' is-mine' : '';
+      var deleteBtn = msg.isMine ? '<button onclick="deleteMessage(\'' + msg.id + '\')">删除</button>' : '';
+
+      html += '<div class="msg-item' + isMineClass + '">';
+      html += '  <div class="msg-head">';
+      html += '    <div class="msg-avatar ' + avatarClass + '">' + avatarText + '</div>';
+      html += '    <div class="msg-meta">';
+      html += '      <div class="msg-name">' + escapeHtml(msg.nick || '匿名车友') + '</div>';
+      html += '      <div class="msg-info">';
+      html += '        <span class="ip-tag">IP: ' + ipDisplay + '</span>';
+      html += '        <span class="loc-tag">📍 ' + locDisplay + '</span>';
+      html += '        <span class="time-tag">🕐 ' + timeDisplay + '</span>';
+      html += '      </div>';
+      html += '    </div>';
+      html += '  </div>';
+      html += '  <div class="msg-body">' + escapeHtml(msg.content) + '</div>';
+      if (deleteBtn) {
+      html += '  <div class="msg-actions">' + deleteBtn + '</div>';
+      }
+      html += '</div>';
+    }
+
+    listEl.innerHTML = html;
+  }
+
+  // HTML转义
+  function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // 提交留言
+  function submitMessage() {
+    var nickInput = document.getElementById('nickInput');
+    var msgInput = document.getElementById('msgInput');
+    var submitBtn = document.getElementById('submitBtn');
+
+    var nick = nickInput.value.trim();
+    var content = msgInput.value.trim();
+
+    if (!content) {
+      msgInput.focus();
+      msgInput.style.borderColor = 'var(--accent)';
+      setTimeout(function() { msgInput.style.borderColor = ''; }, 1500);
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '发布中...';
+
+    var newMsg = {
+      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+      nick: nick || '匿名车友',
+      ip: visitorIP || '未知',
+      loc: visitorLoc || '未知',
+      isp: visitorIsp || '',
+      content: content,
+      time: Date.now(),
+      isMine: true
+    };
+
+    var messages = getMessages();
+    // 如果是第一次留言，把seed消息标记为seed
+    messages = messages.filter(function(m) {
+      if (SEED_MESSAGES.some(function(s) { return s.id === m.id; })) {
+        m.isSeed = true;
+        return true;
+      }
+      return true;
+    });
+
+    messages.push(newMsg);
+    saveMessages(messages);
+
+    // 清空输入
+    msgInput.value = '';
+
+    // 重新渲染
+    renderMessages();
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = '发布留言';
+
+    // 滚动到新留言
+    var list = document.getElementById('msgList');
+    list.scrollTop = 0;
+  }
+
+  // 删除留言
+  function deleteMessage(id) {
+    var messages = getMessages();
+    messages = messages.filter(function(m) { return m.id !== id; });
+    saveMessages(messages);
+    renderMessages();
+  }
+
+  // 键盘快捷键: Ctrl+Enter 发送
+  document.getElementById('msgInput').addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      submitMessage();
+    }
+  });
+
+  // 初始化
+  fetchIP();
+  renderMessages();
+  </script>
+</body>
+</html>
