@@ -535,5 +535,8 @@ document.addEventListener('click',function(e){if(!e.target.closest('.theme-switc
 (function(){var s=localStorage.getItem('chaoge-theme')||'dark';setTheme(s)})();
 </script>
 
+<script>
+window.addEventListener('scroll',function(){var n=document.querySelector('.nav');if(n)n.classList.toggle('scrolled',window.scrollY>10)},{passive:true});
+</script>
 </body>
 </html>
