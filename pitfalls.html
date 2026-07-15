@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>超哥超车 · 买车避坑指南</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ===== 避坑页专属样式 ===== */
+
+    /* 页面标题区 */
+    .pit-hero {
+      position: relative;
+      overflow: hidden;
+      padding: 4.5rem 1.5rem 3rem;
+      text-align: center;
+      background: radial-gradient(ellipse at 50% 0%, var(--bg2) 0%, var(--bg) 60%, var(--bg) 100%);
+      border-bottom: 1px solid var(--rule);
+    }
+    .pit-hero::before {
+      content: '';
+      position: absolute;
+      top: -30%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80%;
+      height: 120%;
+      background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 18%, transparent) 0%, color-mix(in srgb, var(--accent) 5%, transparent) 35%, transparent 65%);
+      filter: blur(20px);
+      pointer-events: none;
+    }
+    .pit-hero-inner { position: relative; z-index: 1; max-width: var(--max); margin: 0 auto; }
+    .pit-tag {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      color: var(--accent);
+      border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+      background: color-mix(in srgb, var(--accent) 6%, transparent);
+      padding: 0.32rem 0.85rem;
+      border-radius: 20px;
+      margin-bottom: 1.4rem;
+      letter-spacing: 0.08em;
+    }
+    .pit-hero h1 {
+      font-size: clamp(2rem, 6vw, 3.4rem);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 0.9rem;
+      letter-spacing: -0.02em;
+    }
+    .pit-hero h1 .accent { color: var(--accent); }
+    .pit-hero-sub {
+      font-size: clamp(0.98rem, 2.2vw, 1.18rem);
+      color: var(--muted);
+      max-width: 580px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* 坑列表区 */
+    .pit-list {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 1rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.3rem;
+      align-items: start;
+    }
+    @media(max-width:760px){ .pit-list{ grid-template-columns:1fr; } }
+
+    /* 单个坑卡片 */
+    .pit-card {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 1.6rem;
+      transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .pit-card:hover {
+      transform: translateY(-2px);
+      border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.22);
+    }
+    .pit-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(to bottom, var(--accent), color-mix(in srgb, var(--accent) 30%, transparent));
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+    .pit-card:hover::before { opacity: 1; }
+
+    /* 卡片头部 */
+    .pit-head {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+      margin-bottom: 1.4rem;
+      padding-bottom: 1.1rem;
+      border-bottom: 1px dashed var(--rule);
+    }
+    .pit-num {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      padding: 0.28rem 0.6rem;
+      border-radius: 6px;
+      background: color-mix(in srgb, var(--accent) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    }
+    .pit-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--ink);
+      flex: 1 1 100%;
+      line-height: 1.4;
+      margin: 0.2rem 0 0;
+    }
+
+    /* 卡片内容区 */
+    .pit-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+    .pit-block {
+      padding: 0.95rem 1.05rem;
+      border-radius: 8px;
+      position: relative;
+    }
+    .pit-block-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 0.45rem;
+      font-weight: 700;
+    }
+    .pit-block-text {
+      font-size: 0.93rem;
+      line-height: 1.7;
+      color: var(--ink);
+      margin: 0;
+    }
+
+    /* 踩坑区：红色调暗示 */
+    .pit-trap {
+      background: color-mix(in srgb, var(--accent) 8%, transparent);
+      border-left: 4px solid color-mix(in srgb, var(--accent) 70%, #ff0);
+    }
+    .pit-trap .pit-block-label { color: color-mix(in srgb, var(--accent) 70%, #ff0); }
+
+    /* 正解区：绿色调暗示 */
+    .pit-fix {
+      background: color-mix(in srgb, var(--accent2) 8%, transparent);
+      border-left: 4px solid var(--accent2);
+    }
+    .pit-fix .pit-block-label { color: var(--accent2); }
+
+    /* 底部金句区 */
+    .pit-quote {
+      text-align: center;
+      padding: 3rem 1.5rem 1rem !important;
+      border-bottom: none !important;
+    }
+    .pit-quote-text {
+      font-family: var(--font-mono);
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.02em;
+      margin: 0;
+    }
+    .pit-quote-text::before {
+      content: '\201C';
+      color: color-mix(in srgb, var(--accent) 55%, transparent);
+      margin-right: 0.1em;
+    }
+    .pit-quote-text::after {
+      content: '\201D';
+      color: color-mix(in srgb, var(--accent) 55%, transparent);
+      margin-left: 0.1em;
+    }
+
+    /* 底部 CTA */
+    .pit-cta {
+      text-align: center;
+      padding: 1.5rem 1.5rem 4rem !important;
+      border-top: 1px solid var(--rule);
+      background: radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 70%);
+    }
+    .pit-cta-text {
+      font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+      color: var(--ink);
+      margin-bottom: 1.6rem;
+      font-weight: 600;
+    }
+    .pit-cta-btn {
+      display: inline-block;
+      padding: 1rem 2.6rem;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.1rem;
+      text-decoration: none;
+      transition: all 0.2s;
+      box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 30%, transparent);
+    }
+    .pit-cta-btn:hover {
+      background: color-mix(in srgb, var(--accent) 85%, #000);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+    .pit-cta-sub { margin-top: 1rem; color: var(--muted); font-size: 0.95rem; }
+
+    footer .copyright { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
+
+    /* fade-up stagger */
+    .fade-up { opacity: 0; animation: fadeUp 0.6s ease-out forwards; }
+    .d1 { animation-delay: 0.05s; }
+    .d2 { animation-delay: 0.12s; }
+    .d3 { animation-delay: 0.19s; }
+
+    /* 响应式 */
+    @media(max-width:600px) {
+      .pit-card { padding: 1.25rem; }
+      .pit-title { font-size: 1rem; }
+      .pit-block { padding: 0.8rem 0.9rem; }
+      .pit-block-text { font-size: 0.88rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 导航栏 -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">超哥<span class="accent">超车</span></a>
+      <div class="nav-right">
+        <div class="nav-links">
+          <a href="index.html">首页</a>
+          <a href="models.html">模型</a>
+          <a href="calculator.html">算账器</a>
+          <a href="quotes.html">金句</a>
+          <a href="cases.html">案例</a>
+          <a href="checklist.html">清单</a>
+          <a href="compare.html">对比</a>
+          <a href="pitfalls.html" class="active">避坑</a>
+          <a href="recommend.html">推荐</a>
+          <a href="chat.html">在线</a>
+          <a href="about.html">画像</a>
+        </div>
+        <div class="theme-switch">
+          <button class="theme-btn" onclick="toggleThemeMenu()" title="切换主题">🎨</button>
+          <div class="theme-menu" id="themeMenu">
+            <button class="theme-option" data-theme="dark" onclick="setTheme('dark')"><span class="theme-swatch" style="background:#0f1115;border-color:#ff6b35"></span>暗夜橙</button>
+            <button class="theme-option" data-theme="light" onclick="setTheme('light')"><span class="theme-swatch" style="background:#f8f9fa;border-color:#ff6b35"></span>极简白</button>
+            <button class="theme-option" data-theme="forest" onclick="setTheme('forest')"><span class="theme-swatch" style="background:#0a1f1c;border-color:#52d4a8"></span>墨绿森林</button>
+            <button class="theme-option" data-theme="cyber" onclick="setTheme('cyber')"><span class="theme-swatch" style="background:#0d0b1a;border-color:#c026d3"></span>暗紫赛博</button>
+            <button class="theme-option" data-theme="paper" onclick="setTheme('paper')"><span class="theme-swatch" style="background:#1a1612;border-color:#e8a87c"></span>暖纸棕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 页面标题区 -->
+  <div class="pit-hero">
+    <div class="pit-hero-inner">
+      <span class="pit-tag fade-up">防坑手册</span>
+      <h1 class="fade-up d1">买车<span class="accent">避坑指南</span></h1>
+      <p class="pit-hero-sub fade-up d2">车商不会告诉你的12个陷阱。提前知道，少交学费。</p>
+    </div>
+  </div>
+
+  <!-- 坑列表 -->
+  <div class="pit-list">
+
+    <!-- 坑1 -->
+    <article class="pit-card fade-up">
+      <div class="pit-head">
+        <span class="pit-num">PIT 01</span>
+        <h2 class="pit-title">低价引流，到店无车</h2>
+      </div>
+      <div class="pit-body">
+        <div class="pit-block pit-trap">
+          <div class="pit-block-label">⚠️ 踩坑</div>
+          <p class="pit-block-text">网上看到超低价，到店说“卖完了，推荐另一款”</p>
+        </div>
+        <div class="pit-block pit-fix">
+          <div class="pit-block-label">✅ 正解</div>
+          <p class="pit-block-text">电话确认现车+颜色+落地价，问“现在交定金能不能提车”</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- 坑2 -->
+    <article class="pit-card fade-up">
+      <div class="pit-head">
+        <span class="pit-num">PIT 02</span>
+        <h2 class="pit-title">装潢套餐强买强卖</h2>
+      </div>
+      <div class="pit-body">
+        <div class="pit-block pit-trap">
+          <div class="pit-block-label">⚠️ 踩坑</div>
+          <p class="pit-block-text">裸车便宜但必须加1-2万装潢（贴膜+脚垫+记录仪成本不到2000）</p>
+        </div>
+        <div class="pit-block pit-fix">
+          <div class="pit-block-label">✅ 正解</div>
+          <p class="pit-block-text">谈总价（落地价），装潢能不要就不要，自己买更便宜</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- 坑3 -->
+    <article class="pit-card fade-up">
+      <div class="pit-head">
+        <span class="pit-num">PIT 03</span>
+        <h2 class="pit-title">金融手续费暗藏</h2>
+      </div>
+      <div class="pit-body">
+        <div class="pit-block pit-trap">
+          <div class="pit-block-label">⚠️ 踩坑</div>
+          <p class="pit-block-text">贷款收3000-5000“金融手续费”/“GPS费”/“服务费”</p>
+        </div>
+        <div class="pit-block pit-fix">
+          <div class="pit-block-label">✅ 正解</div>
+          <p class="pit-block-text">这些费用都是4S店自己加的，可以谈免或砍掉。问清楚“贷款总利息+所有费用”</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- 坑4 -->
+    <article class="pit-card fade-up">
+      <div class="pit-head">
+        <span class="pit-num">PIT 04</span>
+        <h2 class="pit-title">保险捆绑销售</h2>
+      </div>
+      <div class="pit-body">
+        <div class="pit-block pit-trap">
+          <div class="pit-block-label">⚠️ 踩坑</div>
+          <p class="pit-block-text">必须在4S店买全险，比外面贵30%-50%</p>
+        </div>
+        <div class="pit-block pit-fix">
+          <div class="pit-block-label">✅ 正解</div>
+          <p class="pit-block-text">可以自己在外面买保险，4S店不能强制。如果必须店内买，把保险金额纳入落地价谈判</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- 坑5 -->
+    <article class="pit-card fade-up">
+      <div class="pit-head">
+        <span class="pit-num">PIT 05</span>
+        <h2 class="pit-title">库存车当新车卖</h2>
+      </div>
+      <div class="pit-body">
+        <div class="pit-block pit-trap">
+          <div class="pit-block-label">⚠️ 踩坑</div>
+          <p class="pit-block-text">生产日期超过6个月的库存车，不加告知按新车价卖</p>
+        </div>
+        <div class="pit-block pit-fix">
+          <div class="pit-block-label">✅ 正解</div>
+          <p class="pit-block-text">看铭牌生产日期，超3个月要求优惠，超6个月是库存车应该大幅让利</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- 坑6 -->
+    <article class="pit-card fade-up">
+      <div class="pit-head">
+        <span class="pit-num">PIT 06</span>
+        <h2 class="pit-title">试驾车/展车当新车</h2>
+      </div>
+      <div class="pit-body">
+        <div class="pit-block pit-trap">
+          <div class="pit-block-label">⚠️ 踩坑</div>
+          <p class="pit-block-text">把试驾车或展车翻新后当全新车卖</p>
+        </div>
+        <div class="pit-block pit-fix">
+          <div class="pit-block-label">✅ 正解</div>
+          <p class="pit-block-text">提车时看里程数（新车不超过50km）、看轮胎磨损、看脚踏板磨损</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- 坑7 -->
+    <article class="pit-card fade-up">
+      <div class="pit-head">
+        <span class="pit-num">PIT 07</span>
+        <h2 class="pit-title">续保押金陷阱</h2>
+      </div>
+      <div class="pit-body">
+        <div class="pit-block pit-trap">
+          <div class="pit-block-label">⚠️ 踩坑</div>
+          <p class="pit-block-text">贷款买车要求交几千到一万“续保押金”，第二年必须在店内买保险</p>
+        </div>
+        <div class="pit-block pit-fix">
+          <div class="pit-block-label">✅ 正解</div>
+          <p class="pit-block-text">这是违规收费，可以拒绝。如果已经交了，合同到期后可以要求退还</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- 坑8 -->
+    <article class="pit-card fade-up">
+      <div class="pit-head">
+        <span class="pit-num">PIT 08</span>
+        <h2 class="pit-title">低息贷款实际更贵</h2>
+      </div>
+      <div class="pit-body">
+        <div class="pit-block pit-trap">
+          <div class="pit-block-label">⚠️ 踩坑</div>
+          <p class="pit-block-text">宣传“0利率”或“超低息”，但收高额手续费，算总账比银行贷款还贵</p>
+        </div>
+        <div class="pit-block pit-fix">
+          <div class="pit-block-label">✅ 正解</div>
+          <p class="pit-block-text">算总还款额（月供×期数+首付+所有费用），和银行贷款对比总利息</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- 坑9 -->
+    <article class="pit-card fade-up">
+      <div class="pit-head">
+        <span class="pit-num">PIT 09</span>
+        <h2 class="pit-title">加装配置不写合同</h2>
+      </div>
+      <div class="pit-body">
+        <div class="pit-block pit-trap">
+          <div class="pit-block-label">⚠️ 踩坑</div>
+          <p class="pit-block-text">口头答应送的配置，提车时说没说过</p>
+        </div>
+        <div class="pit-block pit-fix">
+          <div class="pit-block-label">✅ 正解</div>
+          <p class="pit-block-text">所有赠送项目、加装配置、优惠金额全部写进合同，白纸黑字</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- 坑10 -->
+    <article class="pit-card fade-up">
+      <div class="pit-head">
+        <span class="pit-num">PIT 10</span>
+        <h2 class="pit-title">夸大油耗/续航</h2>
+      </div>
+      <div class="pit-body">
+        <div class="pit-block pit-trap">
+          <div class="pit-block-label">⚠️ 踩坑</div>
+          <p class="pit-block-text">宣传油耗5L实际8L，宣传续航600km实际400km</p>
+        </div>
+        <div class="pit-block pit-fix">
+          <div class="pit-block-label">✅ 正解</div>
+          <p class="pit-block-text">看真实车主口碑，别看宣传数据。电车冬天续航打7折是常态</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- 坑11 -->
+    <article class="pit-card fade-up">
+      <div class="pit-head">
+        <span class="pit-num">PIT 11</span>
+        <h2 class="pit-title">延保服务过度推销</h2>
+      </div>
+      <div class="pit-body">
+        <div class="pit-block pit-trap">
+          <div class="pit-block-label">⚠️ 踩坑</div>
+          <p class="pit-block-text">花几千到上万买延长保修，实际覆盖范围很窄，很多部件不赔</p>
+        </div>
+        <div class="pit-block pit-fix">
+          <div class="pit-block-label">✅ 正解</div>
+          <p class="pit-block-text">原厂质保足够用。延保的钱不如存着，真坏了修可能还便宜</p>
+        </div>
+      </div>
+    </article>
+
+    <!-- 坑12 -->
+    <article class="pit-card fade-up">
+      <div class="pit-head">
+        <span class="pit-num">PIT 12</span>
+        <h2 class="pit-title">加价提车</h2>
+      </div>
+      <div class="pit-body">
+        <div class="pit-block pit-trap">
+          <div class="pit-block-label">⚠️ 踩坑</div>
+          <p class="pit-block-text">热门车型要求“加价优先提车”或“加装饰才能提车”</p>
+        </div>
+        <div class="pit-block pit-fix">
+          <div class="pit-block-label">✅ 正解</div>
+          <p class="pit-block-text">没有非买不可的车。等2-3个月产能上来自然降价。实在想早买就多跑几家店比价</p>
+        </div>
+      </div>
+    </article>
+
+  </div>
+
+  <!-- 底部金句 -->
+  <section class="pit-quote">
+    <p class="pit-quote-text">急于掏钱要吃亏。</p>
+  </section>
+
+  <!-- 底部 CTA -->
+  <section class="pit-cta">
+    <p class="pit-cta-text">拿不准的时候问超哥</p>
+    <a class="pit-cta-btn" href="chat.html">跟超哥聊聊</a>
+    <p class="pit-cta-sub">不充值、站消费者立场、算总账</p>
+  </section>
+
+  <!-- 底部 -->
+  <footer>
+    <p class="trust">买车是为生活服务，不是拖累生活。</p>
+    <p class="copyright">© 2026 超哥超车 · 劝退式买车思维视角 · 抖音 @超哥超车 cgcc666</p>
+  </footer>
+
+<script>
+function setTheme(theme){document.documentElement.setAttribute('data-theme',theme);localStorage.setItem('chaoge-theme',theme);document.querySelectorAll('.theme-option').forEach(o=>{o.classList.toggle('active',o.dataset.theme===theme)});document.getElementById('themeMenu').classList.remove('open')}
+function toggleThemeMenu(){document.getElementById('themeMenu').classList.toggle('open')}
+document.addEventListener('click',function(e){if(!e.target.closest('.theme-switch')){document.getElementById('themeMenu')?.classList.remove('open')}});
+(function(){var s=localStorage.getItem('chaoge-theme')||'dark';setTheme(s)})();
+</script>
+
+</body>
+</html>
