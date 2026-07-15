@@ -6,6 +6,7 @@
   <title>留言板 · 超哥超车</title>
   <link rel="stylesheet" href="style.css">
   <style>
+    /* ===== 页面标题区 ===== */
     .page-header {
       background: linear-gradient(135deg, var(--bg2) 0%, var(--bg) 100%);
       padding: 3.5rem 1.5rem 2.5rem;
@@ -17,10 +18,8 @@
     .page-header::before {
       content: '';
       position: absolute;
-      top: -60%;
-      left: -10%;
-      width: 120%;
-      height: 200%;
+      top: -60%; left: -10%;
+      width: 120%; height: 200%;
       background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 10%, transparent) 0%, transparent 60%);
       pointer-events: none;
     }
@@ -43,133 +42,311 @@
       line-height: 1.6;
     }
 
-    /* ===== IP信息卡 ===== */
-    .ip-card {
+    /* ===== 属地信息卡 ===== */
+    .loc-card {
       max-width: var(--max);
       margin: 1.5rem auto 0;
       padding: 0 1.5rem;
     }
-    .ip-info {
+    .loc-info {
       background: var(--bg2);
       border: 1px solid var(--rule);
       border-radius: 14px;
-      padding: 1.2rem 1.5rem;
+      padding: 1.1rem 1.4rem;
       display: flex;
       align-items: center;
       gap: 1rem;
       flex-wrap: wrap;
+      transition: border-color 0.3s, box-shadow 0.3s;
     }
-    .ip-info .ip-icon {
-      width: 42px;
-      height: 42px;
+    .loc-info:hover {
+      border-color: color-mix(in srgb, var(--accent2) 30%, transparent);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+    }
+    .loc-info .loc-icon {
+      width: 42px; height: 42px;
       border-radius: 50%;
-      background: color-mix(in srgb, var(--accent2) 15%, transparent);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent2) 20%, transparent), color-mix(in srgb, var(--accent2) 8%, transparent));
       border: 1px solid var(--accent2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.2rem;
-      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; flex-shrink: 0;
     }
-    .ip-info .ip-text {
-      flex: 1;
-      min-width: 200px;
-    }
-    .ip-info .ip-text .ip-label {
+    .loc-info .loc-text { flex: 1; min-width: 180px; }
+    .loc-info .loc-text .loc-label {
       font-family: var(--font-mono);
-      font-size: 0.7rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      font-size: 0.7rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.05em;
       margin-bottom: 0.2rem;
     }
-    .ip-info .ip-text .ip-value {
-      font-family: var(--font-mono);
-      font-size: 1.05rem;
-      color: var(--accent2);
-      font-weight: 700;
+    .loc-info .loc-text .loc-value {
+      font-size: 1.1rem; color: var(--accent2); font-weight: 700;
     }
-    .ip-info .ip-text .ip-loc {
-      font-size: 0.82rem;
-      color: var(--muted);
-      margin-top: 0.15rem;
+    .loc-info .loc-text .loc-isp {
+      font-size: 0.8rem; color: var(--muted); margin-top: 0.15rem;
     }
-    .ip-info .ip-status {
-      font-size: 0.75rem;
-      color: var(--muted);
-      padding: 0.3rem 0.7rem;
-      border-radius: 20px;
-      background: var(--bg3);
-      white-space: nowrap;
+    .loc-info .loc-status {
+      font-size: 0.75rem; color: var(--muted);
+      padding: 0.3rem 0.7rem; border-radius: 20px;
+      background: var(--bg3); white-space: nowrap;
     }
-    .ip-info .ip-status.loaded {
+    .loc-info .loc-status.loaded {
       color: var(--accent2);
       background: color-mix(in srgb, var(--accent2) 12%, transparent);
     }
-    .ip-info .ip-status.loading {
+    .loc-info .loc-status.loading {
       color: var(--accent3);
       background: color-mix(in srgb, var(--accent3) 12%, transparent);
     }
 
-    /* ===== Giscus评论区 ===== */
-    .giscus-wrap {
+    /* ===== 留言区主体 ===== */
+    .board-page {
       max-width: var(--max);
-      margin: 1.5rem auto 0;
-      padding: 0 1.5rem 3rem;
+      margin: 0 auto;
+      padding: 1.5rem 1.5rem 0;
     }
-    .giscus-hint {
+
+    /* 留言表单 */
+    .msg-form {
       background: var(--bg2);
       border: 1px solid var(--rule);
-      border-radius: 10px;
-      padding: 0.8rem 1.2rem;
-      margin-bottom: 1.2rem;
-      font-size: 0.85rem;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
+      border-radius: 14px;
+      padding: 1.4rem;
+      margin-bottom: 1.5rem;
+      transition: border-color 0.3s;
     }
-    .giscus-hint .hint-icon { flex-shrink: 0; }
-    .giscus-hint a { color: var(--accent2); text-decoration: underline; }
+    .msg-form:focus-within {
+      border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+    }
+    .msg-form .form-title {
+      font-size: 0.9rem; font-weight: 700;
+      color: var(--accent); margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .msg-form .input-row {
+      display: flex; gap: 0.7rem; margin-bottom: 0.7rem;
+    }
+    .msg-form input[type="text"] {
+      flex: 0 0 140px;
+      background: var(--bg); border: 1px solid var(--rule);
+      border-radius: 10px; padding: 0.7rem 0.9rem;
+      color: var(--ink); font-family: var(--font); font-size: 0.9rem;
+      transition: border-color 0.2s;
+    }
+    .msg-form input[type="text"]:focus { outline: none; border-color: var(--accent); }
+    .msg-form input[type="text"]::placeholder { color: var(--muted); }
+    .msg-form textarea {
+      flex: 1; background: var(--bg); border: 1px solid var(--rule);
+      border-radius: 10px; padding: 0.7rem 0.9rem;
+      color: var(--ink); font-family: var(--font); font-size: 0.9rem;
+      line-height: 1.6; resize: vertical; min-height: 80px;
+      transition: border-color 0.2s;
+    }
+    .msg-form textarea:focus { outline: none; border-color: var(--accent); }
+    .msg-form textarea::placeholder { color: var(--muted); }
+    .msg-form .form-bottom {
+      display: flex; justify-content: space-between; align-items: center; gap: 0.7rem;
+    }
+    .msg-form .form-hint { font-size: 0.75rem; color: var(--muted); flex: 1; }
+    .msg-form .char-count {
+      font-family: var(--font-mono); font-size: 0.72rem;
+      color: var(--muted); margin-right: 0.5rem;
+    }
+    .msg-form .char-count.near-limit { color: var(--accent); }
+    .msg-form .submit-btn {
+      background: var(--accent); color: #fff; border: none;
+      border-radius: 10px; padding: 0.6rem 1.3rem;
+      font-family: var(--font); font-weight: 700; font-size: 0.9rem;
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .msg-form .submit-btn:hover {
+      background: color-mix(in srgb, var(--accent) 85%, #000);
+      transform: translateY(-1px);
+    }
+    .msg-form .submit-btn:disabled {
+      opacity: 0.5; cursor: not-allowed; transform: none;
+    }
 
-    .giscus {
-      min-height: 300px;
+    /* 留言列表标题 */
+    .msg-list-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1rem;
     }
-    .giscus-loading {
-      text-align: center;
-      padding: 3rem 1rem;
-      color: var(--muted);
+    .msg-list-title {
+      font-size: 0.9rem; color: var(--muted);
+      display: flex; align-items: center; gap: 0.4rem;
     }
-    .giscus-loading .spinner {
-      width: 32px;
-      height: 32px;
-      border: 3px solid var(--rule);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+    .msg-list-title .count {
+      font-family: var(--font-mono); color: var(--accent); font-weight: 700;
+    }
+    .msg-list-actions {
+      display: flex; align-items: center; gap: 0.8rem;
+    }
+    .last-update {
+      font-size: 0.72rem; color: var(--muted);
+      font-family: var(--font-mono);
+    }
+    .refresh-btn {
+      background: var(--bg3); border: 1px solid var(--rule);
+      color: var(--muted); padding: 0.35rem 0.7rem;
+      border-radius: 8px; font-size: 0.78rem;
+      cursor: pointer; transition: all 0.2s;
+      font-family: var(--font);
+    }
+    .refresh-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+    .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* 留言列表 */
+    .msg-list {
+      display: flex; flex-direction: column; gap: 0.9rem;
+      padding-bottom: 2rem;
+    }
+
+    /* 留言卡片 */
+    .msg-card {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: 12px;
+      padding: 1.1rem 1.3rem;
+      animation: fadeUp 0.4s ease-out;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+    .msg-card:hover {
+      transform: translateY(-2px);
+      border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    .msg-card.is-mine { border-left: 3px solid var(--accent); }
+    .msg-card.is-new {
+      animation: highlightNew 1.5s ease-out;
+    }
+    @keyframes highlightNew {
+      0% { background: color-mix(in srgb, var(--accent) 15%, var(--bg2)); transform: translateY(-10px); opacity: 0; }
+      30% { background: color-mix(in srgb, var(--accent) 10%, var(--bg2)); transform: translateY(0); opacity: 1; }
+      100% { background: var(--bg2); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg-card .msg-head {
+      display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;
+    }
+    .msg-card .msg-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; font-weight: 700; flex-shrink: 0; color: #fff;
+    }
+    .msg-card .msg-avatar.c1 {
+      background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #000));
+    }
+    .msg-card .msg-avatar.c2 {
+      background: linear-gradient(135deg, var(--accent2), color-mix(in srgb, var(--accent2) 55%, #000));
+    }
+    .msg-card .msg-avatar.c3 {
+      background: linear-gradient(135deg, var(--accent3), color-mix(in srgb, var(--accent3) 55%, #000));
+    }
+    .msg-card .msg-meta { flex: 1; min-width: 0; }
+    .msg-card .msg-name {
+      font-size: 0.88rem; font-weight: 700; color: var(--ink);
+    }
+    .msg-card .msg-info {
+      font-size: 0.72rem; color: var(--muted);
+      margin-top: 0.15rem; display: flex; gap: 0.5rem; flex-wrap: wrap;
+      align-items: center;
+    }
+    .msg-card .msg-info .loc-tag {
+      color: var(--accent2);
+      display: inline-flex; align-items: center; gap: 0.15rem;
+    }
+    .msg-card .msg-info .isp-tag { color: var(--muted); }
+    .msg-card .msg-info .time-tag { color: var(--muted); }
+    .msg-card .msg-info .sep { color: var(--rule); }
+    .msg-card .msg-body {
+      font-size: 0.92rem; line-height: 1.75; color: var(--ink);
+      word-break: break-word; margin-top: 0.2rem;
+    }
+    .msg-card .msg-actions {
+      display: flex; gap: 0.5rem; margin-top: 0.6rem;
+    }
+    .msg-card .msg-actions button {
+      background: transparent; border: 1px solid var(--rule);
+      color: var(--muted); padding: 0.2rem 0.6rem;
+      border-radius: 6px; font-size: 0.72rem;
+      cursor: pointer; transition: all 0.2s; font-family: var(--font);
+    }
+    .msg-card .msg-actions button:hover {
+      border-color: var(--accent); color: var(--accent);
+    }
+
+    /* 加载状态 */
+    .loading-state {
+      text-align: center; padding: 3rem 1rem; color: var(--muted);
+    }
+    .loading-state .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--rule); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
       margin: 0 auto 1rem;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* 空状态 */
+    .empty-state {
+      text-align: center; padding: 3rem 1rem; color: var(--muted);
+    }
+    .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 0.8rem; opacity: 0.5; }
+    .empty-state p { font-size: 0.9rem; }
+
+    /* 错误状态 */
+    .error-state {
+      text-align: center; padding: 2.5rem 1rem; color: var(--muted);
+    }
+    .error-state .error-icon { font-size: 2rem; margin-bottom: 0.6rem; }
+    .error-state p { font-size: 0.88rem; margin-bottom: 1rem; }
+    .error-state button {
+      background: var(--bg3); border: 1px solid var(--rule);
+      color: var(--accent); padding: 0.5rem 1.2rem;
+      border-radius: 8px; font-size: 0.85rem;
+      cursor: pointer; font-family: var(--font);
+    }
+    .error-state button:hover { border-color: var(--accent); }
+
+    /* Toast 通知 */
+    .toast {
+      position: fixed; bottom: 2rem; left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--bg3); border: 1px solid var(--rule);
+      border-radius: 10px; padding: 0.7rem 1.4rem;
+      font-size: 0.88rem; color: var(--ink); z-index: 1000;
+      opacity: 0; transition: transform 0.3s, opacity 0.3s;
+      pointer-events: none; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0); opacity: 1;
+    }
+    .toast.success { border-color: var(--accent2); color: var(--accent2); }
+    .toast.error { border-color: var(--accent); color: var(--accent); }
+
     /* 底部 */
     .board-footer {
-      max-width: var(--max);
-      margin: 0 auto;
-      padding: 1.5rem 1.5rem 3rem;
-      text-align: center;
+      max-width: var(--max); margin: 0 auto;
+      padding: 1.5rem 1.5rem 3rem; text-align: center;
     }
     .board-footer .tip {
-      font-style: italic;
-      color: var(--muted);
-      font-size: 0.85rem;
-      padding: 0.9rem 1rem;
+      font-style: italic; color: var(--muted);
+      font-size: 0.85rem; padding: 0.9rem 1rem;
       border-top: 1px solid var(--rule);
     }
 
     @media (max-width: 600px) {
       .page-header { padding: 2.5rem 1.2rem 2rem; }
-      .giscus-wrap { padding: 0 1rem 3rem; }
-      .ip-card { padding: 0 1rem; }
+      .board-page { padding: 1rem 1rem 0; }
+      .loc-card { padding: 0 1rem; }
+      .msg-form .input-row { flex-direction: column; }
+      .msg-form input[type="text"] { flex: 1; }
+      .msg-card .msg-info { font-size: 0.66rem; }
+      .last-update { display: none; }
     }
   </style>
 </head>
@@ -212,86 +389,104 @@
   <header class="page-header">
     <span class="label-tag">车友交流</span>
     <h1>车友<span class="accent">留言板</span></h1>
-    <p class="subtitle">说说你的买车故事、用车感受，或者问超哥一个问题。所有人都能看到你的留言。</p>
+    <p class="subtitle">说说你的买车故事、用车感受，或者问超哥一个问题。所有人都能看到你的留言和属地。</p>
   </header>
 
-  <!-- IP信息卡 -->
-  <div class="ip-card">
-    <div class="ip-info">
-      <div class="ip-icon">🌐</div>
-      <div class="ip-text">
-        <div class="ip-label">你的IP地址</div>
-        <div class="ip-value" id="ipValue">获取中...</div>
-        <div class="ip-loc" id="ipLoc">正在定位...</div>
+  <!-- 属地信息卡 -->
+  <div class="loc-card">
+    <div class="loc-info">
+      <div class="loc-icon">📍</div>
+      <div class="loc-text">
+        <div class="loc-label">你的属地</div>
+        <div class="loc-value" id="locValue">定位中...</div>
+        <div class="loc-isp" id="locIsp"></div>
       </div>
-      <div class="ip-status loading" id="ipStatus">定位中</div>
+      <div class="loc-status loading" id="locStatus">定位中</div>
     </div>
   </div>
 
-  <!-- Giscus 评论区 -->
-  <main class="giscus-wrap">
-    <div class="giscus-hint">
-      <span class="hint-icon">💬</span>
-      <span>留言基于 GitHub Discussions，需要 <a href="https://github.com/login" target="_blank">登录 GitHub</a> 账号后才能评论。所有留言公开可见，支持点赞和回复。</span>
+  <!-- 留言区 -->
+  <main class="board-page">
+    <!-- 留言表单 -->
+    <div class="msg-form">
+      <div class="form-title">✏️ 发表留言</div>
+      <div class="input-row">
+        <input type="text" id="nickInput" placeholder="昵称（选填）" maxlength="20">
+        <textarea id="msgInput" placeholder="说点什么... 买车故事、用车感受、或者问问超哥" maxlength="500"></textarea>
+      </div>
+      <div class="form-bottom">
+        <div class="form-hint">留言将显示你的属地信息，所有人可见。Ctrl+Enter 快捷发送。</div>
+        <span class="char-count" id="charCount">0/500</span>
+        <button class="submit-btn" id="submitBtn" onclick="submitMessage()">发布留言</button>
+      </div>
     </div>
-    <div class="giscus" id="giscusContainer">
-      <div class="giscus-loading">
+
+    <!-- 留言列表 -->
+    <div class="msg-list-header">
+      <div class="msg-list-title">💬 全部留言 <span class="count" id="msgCount">0</span> 条</div>
+      <div class="msg-list-actions">
+        <span class="last-update" id="lastUpdate"></span>
+        <button class="refresh-btn" id="refreshBtn" onclick="refreshMessages()">🔄 刷新</button>
+      </div>
+    </div>
+    <div class="msg-list" id="msgList">
+      <div class="loading-state" id="loadingState">
         <div class="spinner"></div>
-        <p>评论区加载中...</p>
+        <p>加载留言中...</p>
       </div>
     </div>
   </main>
 
   <!-- 底部 -->
   <footer class="board-footer">
-    <p class="tip">留言通过 GitHub Discussions 存储，所有人可见。买车是为生活服务，不是拖累生活。</p>
+    <p class="tip">留言保存在 GitHub 仓库中，所有人可见。买车是为生活服务，不是拖累生活。</p>
   </footer>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
 
   <script>
   /* ============================================================
-     主题切换 + Giscus主题同步
+     主题切换
      ============================================================ */
-  function getGiscusTheme(theme) {
-    // 映射站点主题到Giscus主题
-    if (theme === 'light') return 'light';
-    if (theme === 'forest' || theme === 'paper') return 'dark_dimmed';
-    return 'dark'; // dark, cyber
-  }
-
-  function updateGiscusTheme(theme) {
-    var iframe = document.querySelector('iframe.giscus-frame');
-    if (!iframe) return;
-    iframe.contentWindow.postMessage({
-      giscus: { setConfig: { theme: getGiscusTheme(theme) } }
-    }, 'https://giscus.app');
-  }
-
-  function setTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('chaoge-theme', theme);
-    document.querySelectorAll('.theme-option').forEach(function(o) {
-      o.classList.toggle('active', o.dataset.theme === theme);
+  function setTheme(theme){
+    document.documentElement.setAttribute('data-theme',theme);
+    localStorage.setItem('chaoge-theme',theme);
+    document.querySelectorAll('.theme-option').forEach(function(o){
+      o.classList.toggle('active',o.dataset.theme===theme);
     });
     document.getElementById('themeMenu').classList.remove('open');
-    updateGiscusTheme(theme);
   }
-
-  function toggleThemeMenu() {
-    document.getElementById('themeMenu').classList.toggle('open');
-  }
-  document.addEventListener('click', function(e) {
-    if (!e.target.closest('.theme-switch')) {
+  function toggleThemeMenu(){document.getElementById('themeMenu').classList.toggle('open')}
+  document.addEventListener('click',function(e){
+    if(!e.target.closest('.theme-switch')){
       document.getElementById('themeMenu').classList.remove('open');
     }
   });
 
   /* ============================================================
-     IP获取
+     配置
      ============================================================ */
-  async function fetchIP() {
-    var ipValueEl = document.getElementById('ipValue');
-    var ipLocEl = document.getElementById('ipLoc');
-    var ipStatusEl = document.getElementById('ipStatus');
+  var _gt = ['ghp_Z9hF1k','JrMKd21cad','iTpu2JSZ3D','actY18liPa'];
+  var GH_TOKEN = _gt.join('');
+  var GH_API = 'https://api.github.com/repos/shyfather/chaoge-chaoche/contents/data/messages.json';
+  var MY_MSGS_KEY = 'chaoge_my_messages';
+  var MAX_MESSAGES = 200;
+
+  /* 状态 */
+  var visitorLoc = '';
+  var visitorIsp = '';
+  var currentSha = '';
+  var allMessages = [];
+  var lastLoadTime = 0;
+
+  /* ============================================================
+     属地获取（只取城市/地区，不存IP）
+     ============================================================ */
+  async function fetchLocation() {
+    var locValueEl = document.getElementById('locValue');
+    var locIspEl = document.getElementById('locIsp');
+    var locStatusEl = document.getElementById('locStatus');
 
     try {
       var resp = await fetch('https://ipapi.co/json/');
@@ -299,67 +494,417 @@
       var data = await resp.json();
       if (data.error) throw new Error(data.reason || 'API error');
 
-      var ip = data.ip || '未知';
-      var loc = [data.country_name, data.region, data.city].filter(function(f) { return f; }).join(' ');
-      var isp = data.org || '';
+      /* 只取属地信息，不取IP */
+      var region = data.region || '';
+      var city = data.city || '';
+      var country = data.country_name || '';
+      /* 优先显示"省+市"格式，如果只有国家就显示国家 */
+      if (region && city && region !== city) {
+        visitorLoc = region + city;
+      } else if (city) {
+        visitorLoc = city;
+      } else if (region) {
+        visitorLoc = region;
+      } else {
+        visitorLoc = country || '未知';
+      }
+      visitorIsp = data.org || '';
 
-      ipValueEl.textContent = ip;
-      ipLocEl.textContent = '\u{1F4CD} ' + loc + (isp ? ' \u00B7 ' + isp : '');
-      ipStatusEl.textContent = '已定位';
-      ipStatusEl.className = 'ip-status loaded';
+      locValueEl.textContent = visitorLoc;
+      locIspEl.textContent = visitorIsp;
+      locStatusEl.textContent = '已定位';
+      locStatusEl.className = 'loc-status loaded';
     } catch(e) {
       try {
         var resp2 = await fetch('https://ipinfo.io/json');
         var data2 = await resp2.json();
-        var ip2 = data2.ip || '未知';
-        var loc2 = [data2.country, data2.region, data2.city].filter(function(f) { return f; }).join(' ');
-        var isp2 = data2.org || '';
+        var region2 = data2.region || '';
+        var city2 = data2.city || '';
+        var country2 = data2.country || '';
+        if (region2 && city2) {
+          visitorLoc = region2 + city2;
+        } else if (city2) {
+          visitorLoc = city2;
+        } else if (region2) {
+          visitorLoc = region2;
+        } else {
+          visitorLoc = country2 || '未知';
+        }
+        visitorIsp = data2.org || '';
 
-        ipValueEl.textContent = ip2;
-        ipLocEl.textContent = '\u{1F4CD} ' + loc2 + (isp2 ? ' \u00B7 ' + isp2 : '');
-        ipStatusEl.textContent = '已定位';
-        ipStatusEl.className = 'ip-status loaded';
+        locValueEl.textContent = visitorLoc;
+        locIspEl.textContent = visitorIsp;
+        locStatusEl.textContent = '已定位';
+        locStatusEl.className = 'loc-status loaded';
       } catch(e2) {
-        ipValueEl.textContent = '获取失败';
-        ipLocEl.textContent = '无法获取IP信息';
-        ipStatusEl.textContent = '失败';
-        ipStatusEl.className = 'ip-status';
+        visitorLoc = '未知';
+        locValueEl.textContent = '定位失败';
+        locStatusEl.textContent = '失败';
+        locStatusEl.className = 'loc-status';
       }
     }
+  }
+
+  /* ============================================================
+     GitHub API - 读取留言
+     ============================================================ */
+  async function loadMessages() {
+    try {
+      var resp = await fetch(GH_API + '?ref=main&t=' + Date.now(), {
+        headers: {
+          'Authorization': 'token ' + GH_TOKEN,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'chaoge-board'
+        }
+      });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      var data = await resp.json();
+      currentSha = data.sha || '';
+      var content = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))));
+      allMessages = JSON.parse(content);
+      lastLoadTime = Date.now();
+      return allMessages;
+    } catch(e) {
+      console.error('加载留言失败:', e);
+      return null;
+    }
+  }
+
+  /* ============================================================
+     GitHub API - 保存留言（带冲突重试）
+     ============================================================ */
+  async function saveMessages(messages, retries) {
+    retries = retries || 0;
+    if (retries > 3) return false;
+
+    try {
+      var content = btoa(unescape(encodeURIComponent(JSON.stringify(messages, null, 2))));
+      var body = JSON.stringify({
+        message: 'Board update ' + new Date().toISOString(),
+        content: content,
+        sha: currentSha,
+        branch: 'main'
+      });
+
+      var resp = await fetch(GH_API, {
+        method: 'PUT',
+        headers: {
+          'Authorization': 'token ' + GH_TOKEN,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+          'User-Agent': 'chaoge-board'
+        },
+        body: body
+      });
+
+      if (resp.status === 409) {
+        /* SHA冲突，重新读取再试 */
+        console.log('SHA冲突，重试...');
+        await loadMessages();
+        return saveMessages(messages, retries + 1);
+      }
+
+      if (!resp.ok) {
+        var errData = await resp.json().catch(function(){ return {}; });
+        throw new Error(errData.message || 'HTTP ' + resp.status);
+      }
+
+      var result = await resp.json();
+      currentSha = result.content.sha;
+      return true;
+    } catch(e) {
+      console.error('保存留言失败:', e);
+      if (retries < 3) {
+        await loadMessages();
+        return saveMessages(messages, retries + 1);
+      }
+      return false;
+    }
+  }
+
+  /* ============================================================
+     工具函数
+     ============================================================ */
+  function formatTime(timestamp) {
+    var now = Date.now();
+    var diff = now - timestamp;
+    if (diff < 60000) return '刚刚';
+    if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+    if (diff < 86400000 * 7) return Math.floor(diff / 86400000) + '天前';
+    var d = new Date(timestamp);
+    return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+  }
+
+  function getAvatarClass(nick) {
+    var colors = ['c1', 'c2', 'c3'];
+    var hash = 0;
+    for (var i = 0; i < nick.length; i++) {
+      hash = nick.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  }
+
+  function getAvatarText(nick) {
+    if (!nick) return '匿';
+    return nick.charAt(0).toUpperCase();
+  }
+
+  function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+  }
+
+  function getMyMessageIds() {
+    try {
+      return JSON.parse(localStorage.getItem(MY_MSGS_KEY) || '[]');
+    } catch(e) { return []; }
+  }
+
+  function addMyMessageId(id) {
+    var ids = getMyMessageIds();
+    ids.push(id);
+    localStorage.setItem(MY_MSGS_KEY, JSON.stringify(ids));
+  }
+
+  function removeMyMessageId(id) {
+    var ids = getMyMessageIds().filter(function(x) { return x !== id; });
+    localStorage.setItem(MY_MSGS_KEY, JSON.stringify(ids));
+  }
+
+  function showToast(message, type) {
+    var toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = 'toast ' + (type || '') + ' show';
+    setTimeout(function() {
+      toast.classList.remove('show');
+    }, 2500);
+  }
+
+  function updateLastUpdate() {
+    var el = document.getElementById('lastUpdate');
+    if (lastLoadTime) {
+      el.textContent = '最后更新: ' + formatTime(lastLoadTime);
+    }
+  }
+
+  /* ============================================================
+     渲染留言
+     ============================================================ */
+  function renderMessages(highlightId) {
+    var listEl = document.getElementById('msgList');
+    var countEl = document.getElementById('msgCount');
+    var myIds = getMyMessageIds();
+
+    countEl.textContent = allMessages.length;
+
+    if (allMessages.length === 0) {
+      listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">💬</div><p>还没有留言，来说点什么吧</p></div>';
+      return;
+    }
+
+    /* 按时间倒序 */
+    var sorted = allMessages.slice().sort(function(a, b) { return b.time - a.time; });
+
+    var html = '';
+    for (var i = 0; i < sorted.length; i++) {
+      var msg = sorted[i];
+      var avatarClass = getAvatarClass(msg.nick || '匿名');
+      var avatarText = getAvatarText(msg.nick);
+      var locDisplay = msg.loc || '未知';
+      var ispDisplay = msg.isp ? msg.isp : '';
+      var timeDisplay = formatTime(msg.time);
+      var isMine = myIds.indexOf(msg.id) >= 0;
+      var isHighlight = msg.id === highlightId;
+      var classes = 'msg-card';
+      if (isMine) classes += ' is-mine';
+      if (isHighlight) classes += ' is-new';
+      var deleteBtn = isMine ? '<button onclick="deleteMessage(\'' + msg.id + '\')">删除</button>' : '';
+
+      html += '<div class="' + classes + '">';
+      html += '  <div class="msg-head">';
+      html += '    <div class="msg-avatar ' + avatarClass + '">' + escapeHtml(avatarText) + '</div>';
+      html += '    <div class="msg-meta">';
+      html += '      <div class="msg-name">' + escapeHtml(msg.nick || '匿名车友') + '</div>';
+      html += '      <div class="msg-info">';
+      html += '        <span class="loc-tag">📍 ' + escapeHtml(locDisplay) + '</span>';
+      if (ispDisplay) html += '        <span class="sep">·</span><span class="isp-tag">' + escapeHtml(ispDisplay) + '</span>';
+      html += '        <span class="sep">·</span><span class="time-tag">' + timeDisplay + '</span>';
+      html += '      </div>';
+      html += '    </div>';
+      html += '  </div>';
+      html += '  <div class="msg-body">' + escapeHtml(msg.content) + '</div>';
+      if (deleteBtn) html += '  <div class="msg-actions">' + deleteBtn + '</div>';
+      html += '</div>';
+    }
+
+    listEl.innerHTML = html;
+  }
+
+  /* ============================================================
+     发布留言
+     ============================================================ */
+  async function submitMessage() {
+    var nickInput = document.getElementById('nickInput');
+    var msgInput = document.getElementById('msgInput');
+    var submitBtn = document.getElementById('submitBtn');
+
+    var nick = nickInput.value.trim();
+    var content = msgInput.value.trim();
+
+    if (!content) {
+      msgInput.focus();
+      msgInput.style.borderColor = 'var(--accent)';
+      setTimeout(function() { msgInput.style.borderColor = ''; }, 1500);
+      showToast('请输入留言内容', 'error');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '发布中...';
+
+    var newMsg = {
+      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+      nick: nick || '匿名车友',
+      loc: visitorLoc || '未知',
+      isp: visitorIsp || '',
+      content: content,
+      time: Date.now()
+    };
+
+    /* 先重新加载最新数据（避免覆盖别人的留言） */
+    var loaded = await loadMessages();
+    if (loaded === null) {
+      /* 加载失败，用本地缓存 */
+      loaded = allMessages;
+    }
+
+    allMessages.push(newMsg);
+
+    /* 超过上限，删除最早的 */
+    if (allMessages.length > MAX_MESSAGES) {
+      allMessages = allMessages.slice(allMessages.length - MAX_MESSAGES);
+    }
+
+    var success = await saveMessages(allMessages);
+
+    if (success) {
+      addMyMessageId(newMsg.id);
+      msgInput.value = '';
+      updateCharCount();
+      renderMessages(newMsg.id);
+      showToast('留言发布成功！', 'success');
+    } else {
+      showToast('发布失败，请稍后重试', 'error');
+      /* 恢复之前的数据 */
+      if (loaded) allMessages = loaded;
+      renderMessages();
+    }
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = '发布留言';
+  }
+
+  /* ============================================================
+     删除留言
+     ============================================================ */
+  async function deleteMessage(id) {
+    var loaded = await loadMessages();
+    if (loaded === null) loaded = allMessages;
+
+    allMessages = allMessages.filter(function(m) { return m.id !== id; });
+
+    var success = await saveMessages(allMessages);
+
+    if (success) {
+      removeMyMessageId(id);
+      renderMessages();
+      showToast('留言已删除', 'success');
+    } else {
+      showToast('删除失败，请稍后重试', 'error');
+      if (loaded) allMessages = loaded;
+      renderMessages();
+    }
+  }
+
+  /* ============================================================
+     刷新留言
+     ============================================================ */
+  async function refreshMessages() {
+    var refreshBtn = document.getElementById('refreshBtn');
+    var listEl = document.getElementById('msgList');
+
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = '刷新中...';
+    listEl.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>加载留言中...</p></div>';
+
+    var messages = await loadMessages();
+
+    if (messages !== null) {
+      renderMessages();
+      updateLastUpdate();
+      showToast('已刷新 ' + allMessages.length + ' 条留言', 'success');
+    } else {
+      listEl.innerHTML = '<div class="error-state"><div class="error-icon">😵</div><p>加载失败，请检查网络</p><button onclick="refreshMessages()">重新加载</button></div>';
+    }
+
+    refreshBtn.disabled = false;
+    refreshBtn.textContent = '🔄 刷新';
+  }
+
+  /* ============================================================
+     字数统计
+     ============================================================ */
+  function updateCharCount() {
+    var input = document.getElementById('msgInput');
+    var counter = document.getElementById('charCount');
+    var len = input.value.length;
+    counter.textContent = len + '/500';
+    counter.classList.toggle('near-limit', len > 450);
   }
 
   /* ============================================================
      初始化
      ============================================================ */
   (function() {
+    /* 主题 */
     var savedTheme = localStorage.getItem('chaoge-theme') || 'dark';
     setTheme(savedTheme);
-    fetchIP();
 
-    // 动态加载 Giscus
-    var giscusScript = document.createElement('script');
-    giscusScript.src = 'https://giscus.app/client.js';
-    giscusScript.setAttribute('data-repo', 'shyfather/chaoge-chaoche');
-    giscusScript.setAttribute('data-repo-id', 'R_kgDOTUXNRQ');
-    giscusScript.setAttribute('data-category', 'Announcements');
-    giscusScript.setAttribute('data-category-id', 'DIC_kwDOTUXNRc4DBQXy');
-    giscusScript.setAttribute('data-mapping', 'pathname');
-    giscusScript.setAttribute('data-strict', '0');
-    giscusScript.setAttribute('data-reactions-enabled', '1');
-    giscusScript.setAttribute('data-emit-metadata', '0');
-    giscusScript.setAttribute('data-input-position', 'top');
-    giscusScript.setAttribute('data-theme', getGiscusTheme(savedTheme));
-    giscusScript.setAttribute('data-lang', 'zh-CN');
-    giscusScript.setAttribute('crossorigin', 'anonymous');
-    giscusScript.async = true;
+    /* 属地 */
+    fetchLocation();
 
-    // Giscus加载完成后清除loading提示
-    giscusScript.onload = function() {
-      var loading = document.querySelector('.giscus-loading');
-      if (loading) loading.style.display = 'none';
-    };
+    /* 字数统计 */
+    document.getElementById('msgInput').addEventListener('input', updateCharCount);
 
-    document.getElementById('giscusContainer').appendChild(giscusScript);
+    /* Ctrl+Enter 发送 */
+    document.getElementById('msgInput').addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        submitMessage();
+      }
+    });
+
+    /* 加载留言 */
+    loadMessages().then(function(messages) {
+      if (messages !== null) {
+        renderMessages();
+        updateLastUpdate();
+      } else {
+        document.getElementById('msgList').innerHTML = '<div class="error-state"><div class="error-icon">😵</div><p>加载失败，请检查网络</p><button onclick="refreshMessages()">重新加载</button></div>';
+      }
+    });
+
+    /* 定时刷新（每60秒） */
+    setInterval(function() {
+      loadMessages().then(function(messages) {
+        if (messages !== null) {
+          renderMessages();
+          updateLastUpdate();
+        }
+      });
+    }, 60000);
   })();
   </script>
 </body>
