@@ -430,9 +430,38 @@
       </div>
     </div>
     <div class="msg-list" id="msgList">
-      <div class="loading-state" id="loadingState">
-        <div class="spinner"></div>
-        <p>加载留言中...</p>
+      <div id="loadingState">
+        <div class="msg-card" style="opacity:0.7">
+          <div class="msg-head">
+            <div class="skeleton" style="width:36px;height:36px;border-radius:50%"></div>
+            <div class="msg-meta" style="flex:1">
+              <div class="skeleton" style="width:100px;height:14px;margin-bottom:6px"></div>
+              <div class="skeleton" style="width:160px;height:12px"></div>
+            </div>
+          </div>
+          <div class="skeleton" style="width:100%;height:16px;margin-top:10px"></div>
+          <div class="skeleton" style="width:80%;height:16px;margin-top:6px"></div>
+        </div>
+        <div class="msg-card" style="opacity:0.5">
+          <div class="msg-head">
+            <div class="skeleton" style="width:36px;height:36px;border-radius:50%"></div>
+            <div class="msg-meta" style="flex:1">
+              <div class="skeleton" style="width:80px;height:14px;margin-bottom:6px"></div>
+              <div class="skeleton" style="width:140px;height:12px"></div>
+            </div>
+          </div>
+          <div class="skeleton" style="width:100%;height:16px;margin-top:10px"></div>
+        </div>
+        <div class="msg-card" style="opacity:0.3">
+          <div class="msg-head">
+            <div class="skeleton" style="width:36px;height:36px;border-radius:50%"></div>
+            <div class="msg-meta" style="flex:1">
+              <div class="skeleton" style="width:120px;height:14px;margin-bottom:6px"></div>
+              <div class="skeleton" style="width:100px;height:12px"></div>
+            </div>
+          </div>
+          <div class="skeleton" style="width:90%;height:16px;margin-top:10px"></div>
+        </div>
       </div>
     </div>
   </main>
@@ -908,7 +937,7 @@
 
     refreshBtn.disabled = true;
     refreshBtn.textContent = '刷新中...';
-    listEl.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>加载留言中...</p></div>';
+    listEl.innerHTML = '<div id="loadingState"><div class="msg-card" style="opacity:0.7"><div class="msg-head"><div class="skeleton" style="width:36px;height:36px;border-radius:50%"></div><div class="msg-meta" style="flex:1"><div class="skeleton" style="width:100px;height:14px;margin-bottom:6px"></div><div class="skeleton" style="width:160px;height:12px"></div></div></div><div class="skeleton" style="width:100%;height:16px;margin-top:10px"></div><div class="skeleton" style="width:80%;height:16px;margin-top:6px"></div></div><div class="msg-card" style="opacity:0.5"><div class="msg-head"><div class="skeleton" style="width:36px;height:36px;border-radius:50%"></div><div class="msg-meta" style="flex:1"><div class="skeleton" style="width:80px;height:14px;margin-bottom:6px"></div><div class="skeleton" style="width:140px;height:12px"></div></div></div><div class="skeleton" style="width:100%;height:16px;margin-top:10px"></div></div><div class="msg-card" style="opacity:0.3"><div class="msg-head"><div class="skeleton" style="width:36px;height:36px;border-radius:50%"></div><div class="msg-meta" style="flex:1"><div class="skeleton" style="width:120px;height:14px;margin-bottom:6px"></div><div class="skeleton" style="width:100px;height:12px"></div></div></div><div class="skeleton" style="width:90%;height:16px;margin-top:10px"></div></div></div>';
 
     var messages = await loadMessages();
 
@@ -978,5 +1007,13 @@
     }, 60000);
   })();
   </script>
+
+<script>
+window.addEventListener('scroll', function() {
+  var nav = document.querySelector('.nav');
+  if (nav) nav.classList.toggle('scrolled', window.scrollY > 10);
+}, { passive: true });
+</script>
+
 </body>
 </html>
