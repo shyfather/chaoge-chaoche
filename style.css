@@ -10,7 +10,7 @@
   --rule:#2a2e36; --accent:#ff6b35; --accent2:#4ecdc4; --accent3:#f7c948;
   --nav-bg:rgba(15,17,21,0.92); --hover-bg:color-mix(in srgb, var(--accent) 8%, var(--bg2));
   --font:'BricolageGrotesque',system-ui,sans-serif; --font-mono:'IBMPlexMono',monospace;
-  --max:1000px; --radius:12px; --shadow:0 8px 32px rgba(0,0,0,0.35);
+  --max:1200px; --radius:12px; --shadow:0 8px 32px rgba(0,0,0,0.35);
 }
 
 /* ===== 主题2：极简白 ===== */
@@ -101,6 +101,18 @@ body > * { position:relative; z-index:2; }
 .page { max-width:var(--max); margin:0 auto; padding:0 1.5rem; }
 section { padding:3rem 0; border-bottom:1px solid var(--rule); }
 section:last-of-type { border-bottom:none; }
+
+/* 大屏利用空间：>1400px 时内容区更宽 */
+@media (min-width:1400px) {
+  :root { --max:1320px; }
+  .page, .nav-inner { max-width:1320px; }
+  section { padding:3.5rem 0; }
+}
+/* 超大屏 >1800px 时再扩展 */
+@media (min-width:1800px) {
+  :root { --max:1440px; }
+  .page, .nav-inner { max-width:1440px; }
+}
 
 /* ===== 排版 ===== */
 h2 { font-size:1.6rem; font-weight:700; margin-bottom:1.5rem; display:flex; align-items:center; gap:0.6rem; letter-spacing:-0.01em; }
@@ -221,4 +233,25 @@ footer .trust { font-style:italic; color:var(--muted); font-size:0.9rem; margin-
     scroll-behavior:auto !important;
   }
   .skeleton { animation:none; background:var(--bg3); }
+}
+
+/* ===== 移动端优化 ===== */
+@media (max-width:600px) {
+  html { font-size:15px; } /* 稍小一号让信息密度更好 */
+  .page { padding:0 1rem; }
+  section { padding:2.2rem 0; }
+  h2 { font-size:1.35rem; }
+  h3 { font-size:1rem; }
+  .nav-inner { padding:0.6rem 1rem; gap:0.4rem; }
+  .nav-brand { font-size:0.95rem; }
+  .theme-btn { width:32px; height:32px; font-size:1rem; }
+  .label-tag { font-size:0.65rem; padding:0.15rem 0.5rem; }
+  .btn { padding:0.65rem 1.3rem; font-size:0.9rem; }
+  .card { padding:1.1rem; }
+  footer { padding:1.5rem 0 2.5rem; }
+  footer .trust { font-size:0.82rem; }
+  /* 增大触控目标 */
+  .nav-links a { min-height:36px; display:flex; align-items:center; }
+  .btn { min-height:44px; }
+  .theme-btn { min-width:44px; min-height:44px; }
 }
