@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>油电对比 · 超哥超车</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    /* ===== ev-vs-gas.html 页面专属样式 ===== */
+
+    .page-hero {
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--rule);
+    }
+    .page-hero::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      height: 130%;
+      background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 18%, transparent) 0%, color-mix(in srgb, var(--accent) 5%, transparent) 35%, transparent 65%);
+      filter: blur(22px);
+      pointer-events: none;
+    }
+    .page-hero-inner { position: relative; z-index: 1; }
+
+    /* 输入面板 */
+    .input-panel {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 1.6rem;
+      margin-bottom: 1.5rem;
+    }
+    .panel-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 1.3rem;
+      font-family: var(--font-mono);
+      letter-spacing: 0.04em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .input-row { margin-bottom: 1.3rem; }
+    .input-row:last-child { margin-bottom: 0; }
+    .input-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 0.55rem;
+    }
+    .input-label .name { font-size: 0.9rem; color: var(--ink); font-weight: 600; }
+    .input-label .value {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .input-label .unit { color: var(--muted); font-size: 0.78rem; font-weight: 400; margin-left: 0.15rem; }
+
+    input[type="range"] {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 6px;
+      background: var(--bg3); border-radius: 6px;
+      outline: none; cursor: pointer;
+      border: 1px solid var(--rule);
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--accent); border: 3px solid var(--bg2);
+      box-shadow: 0 0 0 1px var(--accent), 0 2px 8px color-mix(in srgb, var(--accent) 40%, transparent);
+      cursor: pointer; transition: transform 0.15s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.18); }
+    input[type="range"]::-moz-range-thumb {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--accent); border: 3px solid var(--bg2);
+      box-shadow: 0 0 0 1px var(--accent); cursor: pointer;
+    }
+
+    /* 持有年限切换 */
+    .year-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+    .year-btn {
+      padding: 0.75rem 0.4rem;
+      background: var(--bg3);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .year-btn:hover { color: var(--ink); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+    .year-btn.active {
+      background: color-mix(in srgb, var(--accent) 14%, transparent);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* 结果卡片 */
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+    @media(max-width:700px){ .result-grid{ grid-template-columns:1fr; } }
+
+    .result-card {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.4rem 1.4rem;
+      transition: border-color 0.3s, box-shadow 0.3s, transform 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+    .result-card.gas { border-top: 3px solid var(--accent); }
+    .result-card.ev { border-top: 3px solid var(--accent2); }
+    .result-card.cheaper {
+      border-color: #4ade80;
+      box-shadow: 0 10px 28px rgba(74,222,128,0.16);
+      transform: translateY(-2px);
+    }
+    .result-card.cheaper::after {
+      content: '更划算';
+      position: absolute;
+      top: 0.9rem; right: 0.9rem;
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: #4ade80;
+      background: rgba(74,222,128,0.14);
+      padding: 0.18rem 0.55rem;
+      border-radius: 20px;
+      letter-spacing: 0.04em;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 1.2rem;
+    }
+    .card-head .icon { font-size: 1.5rem; }
+    .card-head .name { font-size: 1.15rem; font-weight: 700; color: var(--ink); }
+    .card-head .sub { font-size: 0.76rem; color: var(--muted); font-family: var(--font-mono); margin-left: auto; }
+
+    .cost-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 0.55rem 0;
+      border-bottom: 1px dashed color-mix(in srgb, var(--rule) 70%, transparent);
+      gap: 0.8rem;
+    }
+    .cost-row:last-child { border-bottom: none; }
+    .cost-label {
+      font-size: 0.88rem;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+    .cost-label .cost-sub {
+      font-size: 0.7rem;
+      color: var(--muted);
+      opacity: 0.8;
+      font-family: var(--font-mono);
+    }
+    .cost-val {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+    .cost-val.minus { color: var(--accent2); }
+    .cost-val.tax { color: var(--accent3); font-size: 0.85rem; }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-top: 0.9rem;
+      padding-top: 1rem;
+      border-top: 2px solid var(--rule);
+    }
+    .total-row .t-label {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .total-row .t-val {
+      font-family: var(--font-mono);
+      font-size: 1.7rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .result-card.ev .total-row .t-val { color: var(--accent2); }
+    .result-card.cheaper .total-row .t-val { color: #4ade80; }
+    .total-row .t-val .u { font-size: 0.5em; color: var(--muted); margin-left: 0.15em; font-weight: 400; }
+
+    /* 对比横幅 */
+    .compare-banner {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 1.8rem 1.6rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .compare-banner.win-gas { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+    .compare-banner.win-ev { border-color: color-mix(in srgb, var(--accent2) 45%, transparent); }
+    .compare-banner::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, #4ade80 12%, transparent) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .compare-inner { position: relative; z-index: 1; }
+    .compare-text {
+      font-size: 0.92rem;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      margin-bottom: 0.5rem;
+    }
+    .compare-num {
+      font-family: var(--font-mono);
+      font-size: clamp(2.2rem, 6vw, 3rem);
+      font-weight: 700;
+      color: #4ade80;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+    .compare-num .currency { font-size: 0.5em; margin-right: 0.1em; vertical-align: 0.2em; }
+    .compare-num .unit { font-size: 0.42em; color: var(--muted); margin-left: 0.2em; font-weight: 400; }
+    .compare-winner {
+      margin-top: 0.7rem;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .compare-winner .w-tag {
+      display: inline-block;
+      padding: 0.2rem 0.8rem;
+      border-radius: 20px;
+      background: rgba(74,222,128,0.16);
+      color: #4ade80;
+      margin-right: 0.4rem;
+    }
+
+    /* 计算说明 */
+    .calc-note {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.3rem;
+      margin-bottom: 2rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+    .calc-note .note-title {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.04em;
+    }
+    .calc-note code {
+      font-family: var(--font-mono);
+      color: var(--accent2);
+      background: var(--bg3);
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+
+    /* 超哥判断 */
+    .judge-block {
+      background: color-mix(in srgb, var(--accent) 6%, var(--bg2));
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      border-radius: var(--radius);
+      padding: 1.8rem 1.6rem;
+      position: relative;
+    }
+    .judge-block::before {
+      content: '超哥的判断';
+      position: absolute;
+      top: -11px; left: 18px;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--accent);
+      background: var(--bg);
+      padding: 0 0.6rem;
+      letter-spacing: 0.06em;
+    }
+    .judge-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.9rem;
+      margin-bottom: 1.4rem;
+    }
+    @media(max-width:700px){ .judge-grid{ grid-template-columns:1fr; } }
+    .judge-card {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+      transition: border-color 0.2s;
+    }
+    .judge-card.active-now { border-color: #4ade80; box-shadow: 0 6px 18px rgba(74,222,128,0.12); }
+    .judge-range {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+      letter-spacing: 0.03em;
+    }
+    .judge-card.active-now .judge-range { color: #4ade80; }
+    .judge-pick {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 0.4rem;
+    }
+    .judge-desc {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+    .judge-quote {
+      text-align: center;
+      font-size: clamp(1.1rem, 2.6vw, 1.3rem);
+      color: var(--ink);
+      font-style: italic;
+      padding-top: 1.2rem;
+      border-top: 1px dashed color-mix(in srgb, var(--accent) 35%, transparent);
+    }
+    .judge-quote::before { content: '\201C'; color: var(--accent); font-weight: 700; }
+    .judge-quote::after { content: '\201D'; color: var(--accent); font-weight: 700; }
+    .judge-tip {
+      text-align: center;
+      margin-top: 0.9rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    footer .copyright { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
+    .fade-up { opacity: 0; animation: fadeUp 0.6s ease-out forwards; }
+    .d1 { animation-delay: 0.05s; }
+    .d2 { animation-delay: 0.12s; }
+
+    .back-to-top{position:fixed;bottom:2rem;right:2rem;width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s,transform 0.3s;z-index:90;box-shadow:var(--shadow)}
+    .back-to-top.show{opacity:1;pointer-events:auto}
+    .back-to-top:hover{transform:translateY(-3px)}
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">超哥<span class="accent">超车</span></a>
+      <div class="nav-right">
+        <div class="nav-links">
+          <a href="index.html">首页</a>
+          <a href="models.html">模型</a>
+          <a href="guide.html">流程</a>
+          <a href="calculator.html">算账器</a>
+          <a href="loan.html">贷款</a>
+          <a href="database.html">车型库</a>
+          <a href="compare.html">对比</a>
+          <a href="ev-vs-gas.html" class="active">油电对比</a>
+          <a href="quotes.html">金句</a>
+          <a href="cases.html">案例</a>
+          <a href="stories.html">故事</a>
+          <a href="checklist.html">清单</a>
+          <a href="pitfalls.html">避坑</a>
+          <a href="faq.html">FAQ</a>
+          <a href="videos.html">视频</a>
+          <a href="recommend.html">推荐</a>
+          <a href="quiz.html">测试</a>
+          <a href="chat.html">在线</a>
+          <a href="board.html">留言</a>
+          <a href="about.html">画像</a>
+        </div>
+        <button class="nav-search-btn" onclick="openSearch()" title="搜索">🔍</button>
+        <div class="theme-switch">
+          <button class="theme-btn" onclick="toggleThemeMenu()" title="切换主题">🎨</button>
+          <div class="theme-menu" id="themeMenu">
+            <button class="theme-option" data-theme="dark" onclick="setTheme('dark')"><span class="theme-swatch" style="background:#0f1115;border-color:#ff6b35"></span>暗夜橙</button>
+            <button class="theme-option" data-theme="light" onclick="setTheme('light')"><span class="theme-swatch" style="background:#f8f9fa;border-color:#ff6b35"></span>极简白</button>
+            <button class="theme-option" data-theme="forest" onclick="setTheme('forest')"><span class="theme-swatch" style="background:#0a1f1c;border-color:#52d4a8"></span>墨绿森林</button>
+            <button class="theme-option" data-theme="cyber" onclick="setTheme('cyber')"><span class="theme-swatch" style="background:#0d0b1a;border-color:#c026d3"></span>暗紫赛博</button>
+            <button class="theme-option" data-theme="paper" onclick="setTheme('paper')"><span class="theme-swatch" style="background:#1a1612;border-color:#e8a87c"></span>暖纸棕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <article class="page">
+    <section class="page-hero" style="text-align:center;padding:4rem 0 2.5rem;">
+      <div class="page-hero-inner">
+        <span class="label-tag fade-up">决策工具</span>
+        <h1 class="fade-up d1" style="font-size:clamp(2rem,6vw,3rem);font-weight:700;margin-bottom:0.8rem;">油电<span class="gradient-text">对比</span></h1>
+        <p class="fade-up d2" style="color:var(--muted);max-width:580px;margin:0 auto;line-height:1.7;">输入预算和里程，自动算出油车、电车5年/10年的总花费。别光看省油钱，算算总账再说。</p>
+      </div>
+    </section>
+
+    <section style="padding-top:2rem;">
+      <!-- 输入面板 -->
+      <div class="input-panel">
+        <div class="panel-title">输入你的情况</div>
+
+        <div class="input-row">
+          <div class="input-label">
+            <span class="name">购车预算（裸车价）</span>
+            <span class="value" id="budgetVal">15.0<span class="unit">万</span></span>
+          </div>
+          <input type="range" id="budget" min="5" max="50" step="0.5" value="15">
+        </div>
+
+        <div class="input-row">
+          <div class="input-label">
+            <span class="name">年行驶里程</span>
+            <span class="value" id="mileageVal">15000<span class="unit">km</span></span>
+          </div>
+          <input type="range" id="mileage" min="3000" max="40000" step="500" value="15000">
+        </div>
+
+        <div class="input-row">
+          <div class="input-label">
+            <span class="name">打算持有几年</span>
+          </div>
+          <div class="year-group">
+            <button class="year-btn active" data-year="5" onclick="setYear(5)">5 年</button>
+            <button class="year-btn" data-year="10" onclick="setYear(10)">10 年</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 结果对比卡片 -->
+      <div class="result-grid">
+        <!-- 油车 -->
+        <div class="result-card gas" id="gasCard">
+          <div class="card-head">
+            <span class="icon">🚗</span>
+            <span class="name">油车</span>
+            <span class="sub">燃油</span>
+          </div>
+
+          <div class="cost-row">
+            <span class="cost-label">购车到手价<span class="cost-sub">含购置税 <span id="gasTax">0</span></span></span>
+            <span class="cost-val" id="gasBuy">0</span>
+          </div>
+          <div class="cost-row">
+            <span class="cost-label">能源费<span class="cost-sub">8L/100km · 8元/L</span></span>
+            <span class="cost-val" id="gasFuel">0</span>
+          </div>
+          <div class="cost-row">
+            <span class="cost-label">保险费<span class="cost-sub">持有期内合计</span></span>
+            <span class="cost-val" id="gasIns">0</span>
+          </div>
+          <div class="cost-row">
+            <span class="cost-label">保养费<span class="cost-sub">持有期内合计</span></span>
+            <span class="cost-val" id="gasMaint">0</span>
+          </div>
+          <div class="cost-row">
+            <span class="cost-label">残值回血<span class="cost-sub">保值率 <span id="gasRate">50%</span></span></span>
+            <span class="cost-val minus" id="gasResale">0</span>
+          </div>
+
+          <div class="total-row">
+            <span class="t-label">总花费</span>
+            <span class="t-val"><span id="gasTotal">0</span><span class="u">万</span></span>
+          </div>
+        </div>
+
+        <!-- 电车 -->
+        <div class="result-card ev" id="evCard">
+          <div class="card-head">
+            <span class="icon">⚡</span>
+            <span class="name">电车</span>
+            <span class="sub">纯电</span>
+          </div>
+
+          <div class="cost-row">
+            <span class="cost-label">购车到手价<span class="cost-sub">免购置税</span></span>
+            <span class="cost-val" id="evBuy">0</span>
+          </div>
+          <div class="cost-row">
+            <span class="cost-label">能源费<span class="cost-sub">15kWh/100km · 0.6元/kWh</span></span>
+            <span class="cost-val" id="evFuel">0</span>
+          </div>
+          <div class="cost-row">
+            <span class="cost-label">保险费<span class="cost-sub">比油车贵约20%</span></span>
+            <span class="cost-val" id="evIns">0</span>
+          </div>
+          <div class="cost-row">
+            <span class="cost-label">保养费<span class="cost-sub">约为油车1/3</span></span>
+            <span class="cost-val" id="evMaint">0</span>
+          </div>
+          <div class="cost-row">
+            <span class="cost-label">残值回血<span class="cost-sub">保值率 <span id="evRate">35%</span></span></span>
+            <span class="cost-val minus" id="evResale">0</span>
+          </div>
+
+          <div class="total-row">
+            <span class="t-label">总花费</span>
+            <span class="t-val"><span id="evTotal">0</span><span class="u">万</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 总花费对比横幅 -->
+      <div class="compare-banner" id="compareBanner">
+        <div class="compare-inner">
+          <div class="compare-text" id="compareText">10年下来，电车比油车省</div>
+          <div class="compare-num"><span class="currency">¥</span><span id="diffNum">0</span><span class="unit">万</span></div>
+          <div class="compare-winner" id="compareWinner"><span class="w-tag">⚡ 电车</span>总花费更低，更划算</div>
+        </div>
+      </div>
+
+      <!-- 计算说明 -->
+      <div class="calc-note">
+        <div class="note-title">计算口径说明</div>
+        购车预算即两车相同<code>裸车价</code>，油车到手价含<code>购置税(约裸车价8.85%)</code>，电车<code>免购置税</code>。能源费：油车<code>8L/100km × 8元/L</code>，电车<code>15kWh/100km × 0.6元/kWh</code>。保险按预算×3%基价/年，电车上浮20%。保养油车1500元/万km·年，电车取1/3。残值按裸车价折算：5年油车50%/电车35%，10年油车30%/电车15%。总花费 = 到手价 + 能源 + 保险 + 保养 − 残值。
+      </div>
+
+      <!-- 超哥的判断 -->
+      <div class="judge-block">
+        <div class="judge-grid">
+          <div class="judge-card" id="jc1">
+            <div class="judge-range">年行驶 &lt; 1万公里</div>
+            <div class="judge-pick">🚗 油车更划算</div>
+            <div class="judge-desc">跑得少，电车省的油钱补不回保值率的窟窿。再加上没家充、技术贬值、保险偏贵的隐性成本，油车省心又好出手。</div>
+          </div>
+          <div class="judge-card" id="jc2">
+            <div class="judge-range">年行驶 1万 ~ 2万公里</div>
+            <div class="judge-pick">⚖️ 看保值率</div>
+            <div class="judge-desc">短期持有（3年内）用电车省能源费明显；长期持有（5年以上）要算保值率损失。有家充、不在意残值的选电，反之选油。</div>
+          </div>
+          <div class="judge-card" id="jc3">
+            <div class="judge-range">年行驶 &gt; 2万公里</div>
+            <div class="judge-pick">⚡ 电车更划算</div>
+            <div class="judge-desc">跑得多，电车省下的油费足够覆盖保值率损失，里程越高优势越大。网约车、跨城通勤这类重度用户，电车是真省。</div>
+          </div>
+        </div>
+        <div class="judge-quote">别光看省油钱，算算总账再说。</div>
+        <div class="judge-tip">纯成本测算只是一方面。超哥的实际建议还会考虑充电条件、技术迭代风险、保险涨幅——这才是低里程也倾向油车的真正原因。</div>
+      </div>
+    </section>
+  </article>
+
+  <div class="share-bar">
+    <span class="share-label">分享：</span>
+    <button class="share-btn" onclick="navigator.clipboard.writeText(window.location.href).then(()=>{this.textContent='已复制!';setTimeout(()=>this.textContent='复制链接',1500)})">复制链接</button>
+    <button class="share-btn" onclick="window.open('https://service.weibo.com/share/share.php?url='+encodeURIComponent(window.location.href)+'&title='+encodeURIComponent(document.title))">微博</button>
+  </div>
+
+    <footer>
+    <p class="trust">买车是为生活服务，不是拖累生活。</p>
+    <p class="copyright">© 2026 超哥超车 · 劝退式买车思维视角 · 抖音 @超哥超车 cgcc666</p>
+  </footer>
+
+  <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部">↑</button>
+
+  <script>
+  function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('chaoge-theme',t)}catch(e){}document.querySelectorAll('.theme-option').forEach(o=>o.classList.toggle('active',o.dataset.theme===t))}
+  function toggleThemeMenu(){document.getElementById('themeMenu').classList.toggle('open')}
+  document.addEventListener('click',e=>{if(!e.target.closest('.theme-switch'))document.getElementById('themeMenu')?.classList.remove('open')});
+  (function(){try{const t=localStorage.getItem('chaoge-theme')||'dark';setTheme(t)}catch(e){setTheme('dark')}})();
+  window.addEventListener('scroll',function(){var n=document.querySelector('.nav');if(n)n.classList.toggle('scrolled',window.scrollY>10)},{passive:true});
+  var btt=document.getElementById('backToTop');if(btt){window.addEventListener('scroll',function(){btt.classList.toggle('show',window.scrollY>400)},{passive:true})}
+
+  // ===== 油电对比计算逻辑 =====
+  var holdYears = 5;
+
+  // 元 -> 万 字符串（保留2位小数）
+  function wan(yuan){ return (yuan / 10000).toFixed(2); }
+
+  function setYear(y){
+    holdYears = y;
+    document.querySelectorAll('.year-btn').forEach(function(b){
+      b.classList.toggle('active', parseInt(b.dataset.year) === y);
+    });
+    calculate();
+  }
+
+  function updateInputs(){
+    var b = parseFloat(document.getElementById('budget').value);
+    document.getElementById('budgetVal').innerHTML = b.toFixed(1) + '<span class="unit">万</span>';
+    var m = parseFloat(document.getElementById('mileage').value);
+    document.getElementById('mileageVal').innerHTML = m.toLocaleString() + '<span class="unit">km</span>';
+  }
+
+  function calculate(){
+    var B = parseFloat(document.getElementById('budget').value);   // 购车预算(万) = 裸车价
+    var M = parseFloat(document.getElementById('mileage').value);// 年行驶里程(km)
+    var Y = holdYears;                                            // 持有年限
+
+    var bare = B * 10000; // 裸车价(元)
+
+    // —— 购车到手价 ——
+    var gasTax = bare * 0.0885;          // 油车购置税(元)
+    var gasBuy = bare + gasTax;           // 油车到手价
+    var evBuy  = bare;                    // 电车到手价(免购置税)
+
+    // —— 能源费(总) ——
+    var gasFuel = M * Y * (8 / 100) * 8;  // 8L/100km × 8元/L
+    var evFuel  = M * Y * (15 / 100) * 0.6;// 15kWh/100km × 0.6元/kWh
+
+    // —— 保险(总)：油车按预算3%基价/年，电车贵20% ——
+    var gasIns = B * 300 * Y;   // 300元/万/年 = 3%
+    var evIns  = B * 360 * Y;   // ×1.2
+
+    // —— 保养(总)：油车1500元/万km/年，电车1/3 ——
+    var gasMaint = (M / 10000) * 1500 * Y;
+    var evMaint  = (M / 10000) * 500  * Y;
+
+    // —— 残值(基于裸车价) ——
+    var gasRate = (Y === 5) ? 0.50 : 0.30;
+    var evRate  = (Y === 5) ? 0.35 : 0.15;
+    var gasResale = bare * gasRate;
+    var evResale  = bare * evRate;
+
+    // —— 总花费 ——
+    var gasTotal = gasBuy + gasFuel + gasIns + gasMaint - gasResale;
+    var evTotal  = evBuy  + evFuel  + evIns  + evMaint  - evResale;
+
+    // 渲染：油车
+    document.getElementById('gasTax').textContent   = wan(gasTax) + '万';
+    document.getElementById('gasBuy').textContent  = '+' + wan(gasBuy) + '万';
+    document.getElementById('gasFuel').textContent  = '+' + wan(gasFuel) + '万';
+    document.getElementById('gasIns').textContent   = '+' + wan(gasIns) + '万';
+    document.getElementById('gasMaint').textContent = '+' + wan(gasMaint) + '万';
+    document.getElementById('gasResale').textContent= '-' + wan(gasResale) + '万';
+    document.getElementById('gasRate').textContent  = (gasRate * 100) + '%';
+    document.getElementById('gasTotal').textContent = wan(gasTotal);
+
+    // 渲染：电车
+    document.getElementById('evBuy').textContent    = '+' + wan(evBuy) + '万';
+    document.getElementById('evFuel').textContent   = '+' + wan(evFuel) + '万';
+    document.getElementById('evIns').textContent    = '+' + wan(evIns) + '万';
+    document.getElementById('evMaint').textContent  = '+' + wan(evMaint) + '万';
+    document.getElementById('evResale').textContent = '-' + wan(evResale) + '万';
+    document.getElementById('evRate').textContent   = (evRate * 100) + '%';
+    document.getElementById('evTotal').textContent  = wan(evTotal);
+
+    // 谁更划算
+    var gasCard = document.getElementById('gasCard');
+    var evCard  = document.getElementById('evCard');
+    var cheaperIsGas = (gasTotal <= evTotal);
+    gasCard.classList.toggle('cheaper', cheaperIsGas);
+    evCard.classList.toggle('cheaper', !cheaperIsGas);
+
+    // 对比横幅
+    var diff = Math.abs(gasTotal - evTotal);
+    document.getElementById('diffNum').textContent = wan(diff);
+    var banner = document.getElementById('compareBanner');
+    var winnerEl = document.getElementById('compareWinner');
+    var textEl = document.getElementById('compareText');
+    banner.classList.toggle('win-gas', cheaperIsGas);
+    banner.classList.toggle('win-ev', !cheaperIsGas);
+    textEl.textContent = Y + '年下来，' + (cheaperIsGas ? '油车' : '电车') + '比' + (cheaperIsGas ? '电车' : '油车') + '省';
+    if (cheaperIsGas) {
+      winnerEl.innerHTML = '<span class="w-tag">🚗 油车</span>总花费更低，更划算';
+    } else {
+      winnerEl.innerHTML = '<span class="w-tag">⚡ 电车</span>总花费更低，更划算';
+    }
+
+    // 高亮对应超哥判断卡
+    var jc1 = document.getElementById('jc1');
+    var jc2 = document.getElementById('jc2');
+    var jc3 = document.getElementById('jc3');
+    jc1.classList.remove('active-now');
+    jc2.classList.remove('active-now');
+    jc3.classList.remove('active-now');
+    if (M < 10000) { jc1.classList.add('active-now'); }
+    else if (M <= 20000) { jc2.classList.add('active-now'); }
+    else { jc3.classList.add('active-now'); }
+  }
+
+  // 绑定事件
+  ['budget', 'mileage'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', function(){
+      updateInputs();
+      calculate();
+    });
+  });
+
+  // 初始化
+  updateInputs();
+  calculate();
+  </script>
+<div class="search-overlay" id="searchOverlay" onclick="if(event.target===this)closeSearch()">
+    <div class="search-box">
+      <input type="text" class="search-input" id="searchInput" placeholder="搜索页面内容..." oninput="doSearch(this.value)">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+  </div>
+
+  <script>
+var SEARCH_DATA=[{title:'首页',url:'index.html',kw:'首页 超哥 超车 思维 心智模型 认知 概览'},{title:'八大心智模型',url:'models.html',kw:'模型 经济账本 劝退 需求锚点 时机 短板 面子 马力过剩 油电分层'},{title:'购车流程图',url:'guide.html',kw:'流程 指南 预算 选车 看车 试驾 谈价 合同 验车 提车'},{title:'购车算账器',url:'calculator.html',kw:'算账 计算 折旧 保险 保养 油费 总成本'},{title:'贷款计算器',url:'loan.html',kw:'贷款 月供 利息 首付 计算 金融'},{title:'车型库',url:'database.html',kw:'车型 数据库 筛选 推荐 卡罗拉 思域 凯美瑞 雅阁'},{title:'车型对比',url:'compare.html',kw:'对比 比较 车型 参数 优缺点'},{title:'油电对比',url:'ev-vs-gas.html',kw:'油车 电车 新能源 对比 油费 电费 保值率'},{title:'超哥金句',url:'quotes.html',kw:'金句 名言 买个der 急于掏钱 现金流'},{title:'实战案例',url:'cases.html',kw:'案例 实战 选车 真实 场景'},{title:'投稿故事',url:'stories.html',kw:'故事 投稿 车友 分享 经历'},{title:'购车清单',url:'checklist.html',kw:'清单 检查 提车 验车 注意事项'},{title:'避坑指南',url:'pitfalls.html',kw:'避坑 坑 陷阱 骗局 注意'},{title:'FAQ精选',url:'faq.html',kw:'faq 问答 常见问题 预算 时机 油电 品牌 二手'},{title:'视频精选',url:'videos.html',kw:'视频 劝退 算账 选车 市场分析'},{title:'超哥推荐',url:'recommend.html',kw:'推荐 车型 值得买 性价比'},{title:'购车性格测试',url:'quiz.html',kw:'测试 性格 趣味 理性 面子 冲动'},{title:'超哥在线',url:'chat.html',kw:'在线 聊天 对话 AI 问答'},{title:'留言板',url:'board.html',kw:'留言 评论 车友 讨论'},{title:'超哥画像',url:'about.html',kw:'画像 人物 抖音 博主 超哥超车'}];
+function openSearch(){document.getElementById('searchOverlay').classList.add('open');document.getElementById('searchInput').focus()}
+function closeSearch(){document.getElementById('searchOverlay').classList.remove('open')}
+function doSearch(q){var r=document.getElementById('searchResults');if(!q.trim()){r.innerHTML='';return}var m=SEARCH_DATA.filter(function(d){return(d.title+d.kw).toLowerCase().indexOf(q.toLowerCase())>=0});if(m.length===0){r.innerHTML='<div class="search-no-result">没有找到相关页面</div>';return}r.innerHTML=m.map(function(d){return'<a class="search-result-item" href="'+d.url+'"><div class="sr-title">'+d.title+'</div><div class="sr-kw">'+d.kw+'</div></a>'}).join('')}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSearch()});
+var btt=document.getElementById('backToTop');if(btt){window.addEventListener('scroll',function(){btt.classList.toggle('show',window.scrollY>400)},{passive:true})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
+</script>
+
+</body>
+</html>
