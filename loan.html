@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>贷款计算器 · 超哥超车</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    /* ===== loan.html 页面专属样式 ===== */
+
+    /* 页面标题区 */
+    .page-hero {
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--rule);
+      text-align: center;
+      padding: 4.5rem 1.5rem 3rem;
+      background: radial-gradient(ellipse at 50% 0%, var(--bg2) 0%, var(--bg) 60%, var(--bg) 100%);
+    }
+    .page-hero::before {
+      content: '';
+      position: absolute;
+      top: -40%; left: 50%;
+      transform: translateX(-50%);
+      width: 90%; height: 140%;
+      background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 16%, transparent) 0%, color-mix(in srgb, var(--accent) 5%, transparent) 35%, transparent 65%);
+      filter: blur(20px);
+      pointer-events: none;
+    }
+    .page-hero > * { position: relative; z-index: 1; }
+    .page-hero h1 {
+      font-size: clamp(2rem, 6vw, 3rem);
+      font-weight: 700;
+      margin-bottom: 0.8rem;
+      letter-spacing: -0.02em;
+    }
+    .page-hero h1 .accent { color: var(--accent); }
+    .page-hero .sub {
+      color: var(--muted);
+      max-width: 580px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* 计算器主区 */
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+    @media(max-width:820px){ .calc-grid{ grid-template-columns:1fr; } }
+
+    .calc-panel {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 1.6rem;
+    }
+    .panel-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 1.4rem;
+      font-family: var(--font-mono);
+      letter-spacing: 0.04em;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+
+    /* 输入项 */
+    .input-row { margin-bottom: 1.4rem; }
+    .input-row:last-child { margin-bottom: 0; }
+    .input-label {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 0.55rem;
+    }
+    .input-label .name { font-size: 0.9rem; color: var(--ink); font-weight: 600; }
+    .input-label .value {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .input-label .unit { color: var(--muted); font-size: 0.78rem; font-weight: 400; margin-left: 0.15rem; }
+
+    /* 滑块 */
+    input[type="range"] {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 6px;
+      background: var(--bg3);
+      border-radius: 6px; outline: none; cursor: pointer;
+      border: 1px solid var(--rule);
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--accent);
+      border: 3px solid var(--bg2);
+      box-shadow: 0 0 0 1px var(--accent), 0 2px 8px color-mix(in srgb, var(--accent) 40%, transparent);
+      cursor: pointer; transition: transform 0.15s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.18); }
+    input[type="range"]::-moz-range-thumb {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--accent); border: 3px solid var(--bg2);
+      box-shadow: 0 0 0 1px var(--accent); cursor: pointer;
+    }
+
+    /* 价格行：滑块 + 数字输入 */
+    .price-row { display: flex; align-items: center; gap: 0.8rem; }
+    .price-row input[type="range"] { flex: 1; }
+    .num-input {
+      width: 96px; flex-shrink: 0; text-align: center;
+      padding: 0.55rem 0.6rem;
+      background: var(--bg3);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+    }
+    .num-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
+
+    /* 年限按钮组 */
+    .year-group { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; }
+    .year-btn {
+      padding: 0.7rem 0.3rem;
+      background: var(--bg3);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .year-btn:hover { color: var(--ink); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+    .year-btn.active {
+      background: color-mix(in srgb, var(--accent) 14%, transparent);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .year-btn .u { font-size: 0.72rem; color: var(--muted); font-weight: 400; margin-left: 0.1rem; }
+    .year-btn.active .u { color: var(--accent); }
+
+    .panel-divider { height: 1px; background: var(--rule); margin: 1.4rem 0; border: none; }
+
+    /* ===== 结果面板 ===== */
+    .result-panel {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 1.6rem;
+      position: sticky; top: 80px;
+    }
+    @media(max-width:820px){ .result-panel{ position:static; top:auto; } }
+
+    /* 月供大数字 */
+    .monthly-block {
+      text-align: center;
+      padding: 0.3rem 0 1.4rem;
+      border-bottom: 1px solid var(--rule);
+      margin-bottom: 1.4rem;
+    }
+    .monthly-label {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      margin-bottom: 0.5rem;
+    }
+    .monthly-num {
+      font-family: var(--font-mono);
+      font-size: clamp(2.6rem, 8vw, 3.4rem);
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .monthly-num .currency { font-size: 0.42em; margin-right: 0.12em; vertical-align: 0.25em; color: var(--accent); }
+    .monthly-num .u { font-size: 0.34em; color: var(--muted); margin-left: 0.2em; font-weight: 400; }
+    .monthly-sub {
+      margin-top: 0.7rem;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: var(--accent2);
+    }
+
+    /* 指标网格 */
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7rem;
+    }
+    .metric-card {
+      background: var(--bg3);
+      border-radius: 8px;
+      padding: 0.9rem 0.8rem;
+      text-align: center;
+      border: 1px solid var(--rule);
+      transition: border-color 0.2s;
+    }
+    .metric-card:hover { border-color: color-mix(in srgb, var(--accent2) 40%, transparent); }
+    .metric-card.full { grid-column: 1 / -1; }
+    .metric-label {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+      letter-spacing: 0.03em;
+    }
+    .metric-value {
+      font-family: var(--font-mono);
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent2);
+    }
+    .metric-value.warn { color: var(--accent3); }
+    .metric-value .u { font-size: 0.6em; color: var(--muted); margin-left: 0.15em; font-weight: 400; }
+    .metric-hint { font-size: 0.7rem; color: var(--muted); margin-top: 0.3rem; }
+
+    /* ===== 超哥贷款判断 ===== */
+    .judge-section { padding-top: 0.5rem; }
+    .judge-intro { color: var(--muted); max-width: 680px; margin-bottom: 1.5rem; font-size: 0.95rem; }
+
+    .judge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    @media(max-width:820px){ .judge-grid{ grid-template-columns:1fr; } }
+
+    .judge-card {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 1.3rem 1.3rem 1.1rem;
+      position: relative;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+    .judge-card.ok { border-left: 3px solid var(--accent2); }
+    .judge-card.warn { border-left: 3px solid var(--accent3); }
+    .judge-card.bad { border-left: 3px solid var(--accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent); }
+    .judge-head {
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-bottom: 0.6rem;
+    }
+    .judge-icon {
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; font-weight: 700; flex-shrink: 0;
+    }
+    .judge-card.ok .judge-icon { background: color-mix(in srgb, var(--accent2) 18%, transparent); color: var(--accent2); }
+    .judge-card.warn .judge-icon { background: color-mix(in srgb, var(--accent3) 18%, transparent); color: var(--accent3); }
+    .judge-card.bad .judge-icon { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+    .judge-title { font-size: 0.95rem; font-weight: 700; color: var(--ink); }
+    .judge-status {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 20px;
+      margin-left: auto;
+      white-space: nowrap;
+    }
+    .judge-card.ok .judge-status { color: var(--accent2); background: color-mix(in srgb, var(--accent2) 12%, transparent); }
+    .judge-card.warn .judge-status { color: var(--accent3); background: color-mix(in srgb, var(--accent3) 12%, transparent); }
+    .judge-card.bad .judge-status { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+    .judge-body { font-size: 0.86rem; color: var(--muted); line-height: 1.6; }
+    .judge-body .hi { color: var(--ink); font-weight: 600; font-family: var(--font-mono); }
+    .judge-body .hi.warn { color: var(--accent3); }
+
+    /* 月收入输入 */
+    .income-row {
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-top: 0.7rem;
+      padding-top: 0.7rem;
+      border-top: 1px dashed var(--rule);
+    }
+    .income-row label { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+    .income-input {
+      width: 100%;
+      padding: 0.4rem 0.6rem;
+      background: var(--bg3);
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+    }
+    .income-input:focus { outline: none; border-color: var(--accent); }
+
+    /* 超哥点评 */
+    .chaoge-comment {
+      margin-top: 1.6rem;
+      background: color-mix(in srgb, var(--accent) 8%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+      border-radius: 10px;
+      padding: 1.1rem 1.3rem;
+      position: relative;
+    }
+    .chaoge-comment::before {
+      content: '超哥点评';
+      position: absolute; top: -10px; left: 14px;
+      font-family: var(--font-mono); font-size: 0.68rem;
+      color: var(--accent); background: var(--bg);
+      padding: 0 0.5rem; letter-spacing: 0.06em;
+    }
+    .chaoge-comment .comment-text {
+      font-size: 0.98rem; color: var(--ink); line-height: 1.7;
+      font-style: italic; margin-top: 0.2rem;
+    }
+    .chaoge-comment .comment-text::before { content: '\201C'; color: var(--accent); font-weight: 700; }
+    .chaoge-comment .comment-text::after { content: '\201D'; color: var(--accent); font-weight: 700; }
+
+    /* 返回顶部 */
+    .back-to-top{position:fixed;bottom:2rem;right:2rem;width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s,transform 0.3s;z-index:90;box-shadow:var(--shadow)}
+    .back-to-top.show{opacity:1;pointer-events:auto}
+    .back-to-top:hover{transform:translateY(-3px)}
+
+    .fade-up { opacity: 0; animation: fadeUp 0.6s ease-out forwards; }
+    .d1 { animation-delay: 0.05s; } .d2 { animation-delay: 0.12s; }
+  </style>
+</head>
+<body>
+  <!-- 导航栏 -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">超哥<span class="accent">超车</span></a>
+      <div class="nav-right">
+        <div class="nav-links">
+          <a href="index.html">首页</a>
+          <a href="models.html">模型</a>
+          <a href="guide.html">流程</a>
+          <a href="calculator.html">算账器</a>
+          <a href="loan.html" class="active">贷款</a>
+          <a href="database.html">车型库</a>
+          <a href="compare.html">对比</a>
+          <a href="ev-vs-gas.html">油电对比</a>
+          <a href="quotes.html">金句</a>
+          <a href="cases.html">案例</a>
+          <a href="stories.html">故事</a>
+          <a href="checklist.html">清单</a>
+          <a href="pitfalls.html">避坑</a>
+          <a href="faq.html">FAQ</a>
+          <a href="videos.html">视频</a>
+          <a href="recommend.html">推荐</a>
+          <a href="quiz.html">测试</a>
+          <a href="chat.html">在线</a>
+          <a href="board.html">留言</a>
+          <a href="about.html">画像</a>
+        </div>
+        <button class="nav-search-btn" onclick="openSearch()" title="搜索">🔍</button>
+        <div class="theme-switch">
+          <button class="theme-btn" onclick="toggleThemeMenu()" title="切换主题">🎨</button>
+          <div class="theme-menu" id="themeMenu">
+            <button class="theme-option" data-theme="dark" onclick="setTheme('dark')"><span class="theme-swatch" style="background:#0f1115;border-color:#ff6b35"></span>暗夜橙</button>
+            <button class="theme-option" data-theme="light" onclick="setTheme('light')"><span class="theme-swatch" style="background:#f8f9fa;border-color:#ff6b35"></span>极简白</button>
+            <button class="theme-option" data-theme="forest" onclick="setTheme('forest')"><span class="theme-swatch" style="background:#0a1f1c;border-color:#52d4a8"></span>墨绿森林</button>
+            <button class="theme-option" data-theme="cyber" onclick="setTheme('cyber')"><span class="theme-swatch" style="background:#0d0b1a;border-color:#c026d3"></span>暗紫赛博</button>
+            <button class="theme-option" data-theme="paper" onclick="setTheme('paper')"><span class="theme-swatch" style="background:#1a1612;border-color:#e8a87c"></span>暖纸棕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 页面内容 -->
+  <article class="page" style="padding:0;">
+    <!-- 页面标题区 -->
+    <section class="page-hero">
+      <span class="label-tag fade-up">金融工具</span>
+      <h1 class="fade-up d1">贷款<span class="accent">计算器</span></h1>
+      <p class="sub fade-up d2">别被“月供才两千多”忽悠瘸了。把首付、利息、总账一起算清楚，才知道这贷款划不划算。</p>
+    </section>
+
+    <!-- 计算器主区 -->
+    <section>
+      <div class="calc-grid">
+
+        <!-- 左侧：输入参数 -->
+        <div class="calc-panel">
+          <div class="panel-title">▸ 输入参数</div>
+
+          <!-- 车价 -->
+          <div class="input-row">
+            <div class="input-label">
+              <span class="name">车价</span>
+              <span class="value" id="priceVal">15.0<span class="unit">万</span></span>
+            </div>
+            <div class="price-row">
+              <input type="range" id="price" min="3" max="60" step="0.5" value="15">
+              <input type="number" class="num-input" id="priceInput" min="3" max="60" step="0.5" value="15">
+            </div>
+          </div>
+
+          <!-- 首付比例 -->
+          <div class="input-row">
+            <div class="input-label">
+              <span class="name">首付比例</span>
+              <span class="value" id="downVal">30<span class="unit">%</span></span>
+            </div>
+            <div class="price-row">
+              <input type="range" id="down" min="10" max="80" step="5" value="30">
+              <input type="number" class="num-input" id="downInput" min="10" max="80" step="5" value="30">
+            </div>
+          </div>
+
+          <!-- 贷款年限 -->
+          <div class="input-row">
+            <div class="input-label">
+              <span class="name">贷款年限</span>
+              <span class="value" id="yearVal">3<span class="unit">年</span></span>
+            </div>
+            <div class="year-group" id="yearGroup">
+              <button class="year-btn" data-y="1">1<span class="u">年</span></button>
+              <button class="year-btn" data-y="2">2<span class="u">年</span></button>
+              <button class="year-btn active" data-y="3">3<span class="u">年</span></button>
+              <button class="year-btn" data-y="4">4<span class="u">年</span></button>
+              <button class="year-btn" data-y="5">5<span class="u">年</span></button>
+            </div>
+          </div>
+
+          <hr class="panel-divider">
+
+          <!-- 年利率 -->
+          <div class="input-row">
+            <div class="input-label">
+              <span class="name">年利率</span>
+              <span class="value" id="rateVal">4.50<span class="unit">%</span></span>
+            </div>
+            <div class="price-row">
+              <input type="range" id="rate" min="1" max="12" step="0.05" value="4.5">
+              <input type="number" class="num-input" id="rateInput" min="1" max="12" step="0.05" value="4.5">
+            </div>
+            <p style="font-size:0.76rem;color:var(--muted);margin:0.5rem 0 0;line-height:1.5;">提示：厂家金融常标 2.99%–3.99%，实际叠加手续费后多在 4%–6%。银行车贷 4%–8%。</p>
+          </div>
+        </div>
+
+        <!-- 右侧：结果 -->
+        <div class="result-panel">
+          <div class="panel-title">▸ 还款结果</div>
+
+          <!-- 月供大数字 -->
+          <div class="monthly-block">
+            <div class="monthly-label">每月还款（等额本息）</div>
+            <div class="monthly-num" id="monthlyNum"><span class="currency">¥</span><span id="monthly">3,162</span><span class="u">/月</span></div>
+            <div class="monthly-sub" id="monthlySub">共 36 期</div>
+          </div>
+
+          <!-- 指标 -->
+          <div class="metrics">
+            <div class="metric-card">
+              <div class="metric-label">首付金额</div>
+              <div class="metric-value" id="downPay">4.50<span class="u">万</span></div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">贷款金额</div>
+              <div class="metric-value" id="loanAmt">10.50<span class="u">万</span></div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">总利息</div>
+              <div class="metric-value warn" id="totalInterest">0.99<span class="u">万</span></div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">总还款额</div>
+              <div class="metric-value" id="totalRepay">15.99<span class="u">万</span></div>
+            </div>
+            <div class="metric-card full">
+              <div class="metric-label">比全款多花（贷款代价）</div>
+              <div class="metric-value warn" id="extraCost">0.99<span class="u">万</span></div>
+              <div class="metric-hint" id="extraHint">相当于车价的 6.6%</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 超哥的贷款判断 -->
+    <section class="judge-section">
+      <h2><span class="num">⚖️</span> 超哥的贷款判断</h2>
+      <p class="judge-intro">光算数不够，还得看这贷款压不压身。下面三条红线，实时跟着你的输入走，超哥替你盯着。</p>
+
+      <div class="judge-grid">
+
+        <div class="judge-card" id="judge1">
+          <div class="judge-head">
+            <div class="judge-icon">1</div>
+            <div class="judge-title">月供占比</div>
+            <div class="judge-status" id="j1Status">待输入</div>
+          </div>
+          <div class="judge-body" id="j1Body">
+            <strong style="color:var(--ink);">月供不超过月收入 30% 才算合理。</strong> 超过这条线，养车就会挤掉吃饭、还房贷的钱，日子越过越紧。
+          </div>
+          <div class="income-row">
+            <label for="income">你的月收入</label>
+            <input type="number" class="income-input" id="income" placeholder="如 8000" min="0" step="500">
+            <span style="color:var(--muted);font-size:0.78rem;">元</span>
+          </div>
+        </div>
+
+        <div class="judge-card" id="judge2">
+          <div class="judge-head">
+            <div class="judge-icon">2</div>
+            <div class="judge-title">利息占车价比</div>
+            <div class="judge-status" id="j2Status">待输入</div>
+          </div>
+          <div class="judge-body" id="j2Body">
+            <strong style="color:var(--ink);">总利息超过车价 15% 就要重新考虑。</strong> 利息太重，说明期限太长或利率太高，要么提高首付，要么换个金融方案。
+          </div>
+        </div>
+
+        <div class="judge-card" id="judge3">
+          <div class="judge-head">
+            <div class="judge-icon">3</div>
+            <div class="judge-title">贷款 vs 全款</div>
+            <div class="judge-status" id="j3Status">算算账</div>
+          </div>
+          <div class="judge-body" id="j3Body">
+            贷款多花的这笔钱，<strong style="color:var(--ink);">够你保养好几年了。</strong> 如果手头有闲钱、又不差这点现金流，全款往往更划算；贷款适合把钱留在手里生钱的人。
+          </div>
+        </div>
+
+      </div>
+
+      <div class="chaoge-comment">
+        <p class="comment-text">贷款买车多花的钱，够你保养好几年了。别只盯着月供低不低，利息才是真金白银掏出去的。急于掏钱要吃亏，先把总账算明白再签字。</p>
+      </div>
+    </section>
+  <div class="share-bar">
+    <span class="share-label">分享：</span>
+    <button class="share-btn" onclick="navigator.clipboard.writeText(window.location.href).then(()=>{this.textContent='已复制!';setTimeout(()=>this.textContent='复制链接',1500)})">复制链接</button>
+    <button class="share-btn" onclick="window.open('https://service.weibo.com/share/share.php?url='+encodeURIComponent(window.location.href)+'&title='+encodeURIComponent(document.title))">微博</button>
+  </div>
+
+  </article>
+
+  <!-- 返回顶部按钮 -->
+  <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部">↑</button>
+
+  <!-- 公共脚本 -->
+  <script>
+  function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('chaoge-theme',t)}catch(e){}document.querySelectorAll('.theme-option').forEach(o=>o.classList.toggle('active',o.dataset.theme===t))}
+  function toggleThemeMenu(){document.getElementById('themeMenu').classList.toggle('open')}
+  document.addEventListener('click',e=>{if(!e.target.closest('.theme-switch'))document.getElementById('themeMenu')?.classList.remove('open')});
+  (function(){try{const t=localStorage.getItem('chaoge-theme')||'dark';setTheme(t)}catch(e){setTheme('dark')}})();
+  window.addEventListener('scroll',function(){var n=document.querySelector('.nav');if(n)n.classList.toggle('scrolled',window.scrollY>10)},{passive:true});
+  var btt=document.getElementById('backToTop');if(btt){window.addEventListener('scroll',function(){btt.classList.toggle('show',window.scrollY>400)},{passive:true})}
+  </script>
+
+  <!-- 计算器脚本 -->
+  <script>
+  (function(){
+    var state = { price:15, down:30, year:3, rate:4.5, income:0 };
+    var $ = function(id){ return document.getElementById(id); };
+
+    // 滑块与数字输入联动
+    function bind(rangeId, inputId, key, fmt){
+      var r = $(rangeId), n = $(inputId);
+      r.addEventListener('input', function(){ state[key] = parseFloat(r.value); n.value = r.value; update(); });
+      n.addEventListener('input', function(){
+        var v = parseFloat(n.value);
+        if(isNaN(v)) return;
+        var min = parseFloat(n.min), max = parseFloat(n.max);
+        if(v < min) v = min; if(v > max) v = max;
+        state[key] = v; r.value = v; update();
+      });
+      n.addEventListener('blur', function(){
+        var v = parseFloat(n.value);
+        if(isNaN(v)){ n.value = state[key]; return; }
+        v = Math.max(parseFloat(n.min), Math.min(parseFloat(n.max), v));
+        n.value = v; state[key] = v; r.value = v; update();
+      });
+    }
+    bind('price','priceInput','price');
+    bind('down','downInput','down');
+    bind('rate','rateInput','rate');
+
+    // 年限按钮组
+    var yearBtns = document.querySelectorAll('#yearGroup .year-btn');
+    yearBtns.forEach(function(b){
+      b.addEventListener('click', function(){
+        yearBtns.forEach(function(x){ x.classList.remove('active'); });
+        b.classList.add('active');
+        state.year = parseInt(b.dataset.y, 10);
+        update();
+      });
+    });
+
+    // 月收入
+    $('income').addEventListener('input', function(){
+      var v = parseFloat($('income').value);
+      state.income = isNaN(v) ? 0 : v;
+      updateJudge();
+    });
+
+    // 数字千分位
+    function comma(n){ return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+    function wan(yuan){ return (yuan/10000).toFixed(2); }
+
+    function calc(){
+      var priceYuan = state.price * 10000;
+      var downPay = priceYuan * state.down / 100;
+      var principal = priceYuan - downPay;
+      var months = state.year * 12;
+      var r = state.rate / 100 / 12;
+      var monthly;
+      if(months <= 0){ monthly = 0; }
+      else if(r === 0){ monthly = principal / months; }
+      else { monthly = principal * r * Math.pow(1+r, months) / (Math.pow(1+r, months) - 1); }
+      var totalRepay = monthly * months;
+      var totalInterest = totalRepay - principal;
+      return {
+        priceYuan:priceYuan, downPay:downPay, principal:principal,
+        months:months, monthly:monthly, totalRepay:totalRepay, totalInterest:totalInterest
+      };
+    }
+
+    function update(){
+      var c = calc();
+
+      // 输入显示
+      $('priceVal').innerHTML = state.price.toFixed(1) + '<span class="unit">万</span>';
+      $('downVal').innerHTML = state.down + '<span class="unit">%</span>';
+      $('yearVal').innerHTML = state.year + '<span class="unit">年</span>';
+      $('rateVal').innerHTML = state.rate.toFixed(2) + '<span class="unit">%</span>';
+
+      // 结果
+      $('monthly').textContent = comma(c.monthly);
+      $('monthlySub').textContent = '共 ' + c.months + ' 期 · 等额本息';
+      $('downPay').innerHTML = wan(c.downPay) + '<span class="u">万</span>';
+      $('loanAmt').innerHTML = wan(c.principal) + '<span class="u">万</span>';
+      $('totalInterest').innerHTML = wan(c.totalInterest) + '<span class="u">万</span>';
+      $('totalRepay').innerHTML = wan(c.downPay + c.totalRepay) + '<span class="u">万</span>';
+      $('extraCost').innerHTML = wan(c.totalInterest) + '<span class="u">万</span>';
+
+      var pct = c.priceYuan > 0 ? (c.totalInterest / c.priceYuan * 100) : 0;
+      $('extraHint').textContent = '相当于车价的 ' + pct.toFixed(1) + '%';
+
+      updateJudge(c);
+    }
+
+    function setCard(el, level, statusText){
+      el.classList.remove('ok','warn','bad');
+      el.classList.add(level);
+    }
+
+    function updateJudge(c){
+      c = c || calc();
+
+      // 判断1：月供占比
+      var j1 = $('judge1'), s1 = $('j1Status');
+      if(state.income > 0){
+        var ratio = c.monthly / state.income * 100;
+        if(ratio <= 30){
+          setCard(j1,'ok','合理');
+          s1.textContent = ratio.toFixed(0) + '% · 合理';
+        } else if(ratio <= 50){
+          setCard(j1,'warn','偏高');
+          s1.textContent = ratio.toFixed(0) + '% · 偏高';
+        } else {
+          setCard(j1,'bad','超载');
+          s1.textContent = ratio.toFixed(0) + '% · 超载';
+        }
+        $('j1Body').innerHTML = '<strong style="color:var(--ink);">月供 ' + comma(c.monthly) + ' 元，占你月收入 ' + ratio.toFixed(0) + '%。</strong> 超过 30% 养车就会挤掉吃饭、还房贷的钱，日子越过越紧。';
+      } else {
+        setCard(j1,'ok','待输入');
+        s1.textContent = '填月收入';
+        $('j1Body').innerHTML = '<strong style="color:var(--ink);">月供不超过月收入 30% 才算合理。</strong> 在下方填个月收入，超哥帮你算占比。当前月供 <span class="hi">' + comma(c.monthly) + ' 元</span>。';
+      }
+
+      // 判断2：利息占车价比
+      var j2 = $('judge2'), s2 = $('j2Status');
+      var ipct = c.priceYuan > 0 ? (c.totalInterest / c.priceYuan * 100) : 0;
+      if(ipct <= 15){
+        setCard(j2,'ok','可控');
+        s2.textContent = ipct.toFixed(1) + '% · 可控';
+      } else if(ipct <= 25){
+        setCard(j2,'warn','偏重');
+        s2.textContent = ipct.toFixed(1) + '% · 偏重';
+      } else {
+        setCard(j2,'bad','过重');
+        s2.textContent = ipct.toFixed(1) + '% · 过重';
+      }
+      $('j2Body').innerHTML = '<strong style="color:var(--ink);">总利息 ' + wan(c.totalInterest) + ' 万，占车价 ' + ipct.toFixed(1) + '%。</strong> ' + (ipct>15 ? '超过 15% 红线了，<span class="hi warn">建议提高首付或缩短年限</span>。' : '在 15% 红线以内，利息成本可控。');
+
+      // 判断3：贷款 vs 全款
+      var j3 = $('judge3'), s3 = $('j3Status');
+      var maintain = 2000; // 假设一次常规保养约 2000 元
+      var times = maintain > 0 ? Math.floor(c.totalInterest / maintain * 10) / 10 : 0;
+      setCard(j3, c.totalInterest > 0 ? 'warn' : 'ok','算算账');
+      s3.textContent = '多花 ' + wan(c.totalInterest) + ' 万';
+      $('j3Body').innerHTML = '贷款比全款多花 <span class="hi warn">' + wan(c.totalInterest) + ' 万</span>，<strong style="color:var(--ink);">约够你做 ' + times + ' 次常规保养</strong>。手头有闲钱、又不差现金流，全款往往更划算；贷款适合把钱留在手里能生钱的人。';
+    }
+
+    update();
+  })();
+  </script>
+<div class="search-overlay" id="searchOverlay" onclick="if(event.target===this)closeSearch()">
+    <div class="search-box">
+      <input type="text" class="search-input" id="searchInput" placeholder="搜索页面内容..." oninput="doSearch(this.value)">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+  </div>
+
+  <script>
+var SEARCH_DATA=[{title:'首页',url:'index.html',kw:'首页 超哥 超车 思维 心智模型 认知 概览'},{title:'八大心智模型',url:'models.html',kw:'模型 经济账本 劝退 需求锚点 时机 短板 面子 马力过剩 油电分层'},{title:'购车流程图',url:'guide.html',kw:'流程 指南 预算 选车 看车 试驾 谈价 合同 验车 提车'},{title:'购车算账器',url:'calculator.html',kw:'算账 计算 折旧 保险 保养 油费 总成本'},{title:'贷款计算器',url:'loan.html',kw:'贷款 月供 利息 首付 计算 金融'},{title:'车型库',url:'database.html',kw:'车型 数据库 筛选 推荐 卡罗拉 思域 凯美瑞 雅阁'},{title:'车型对比',url:'compare.html',kw:'对比 比较 车型 参数 优缺点'},{title:'油电对比',url:'ev-vs-gas.html',kw:'油车 电车 新能源 对比 油费 电费 保值率'},{title:'超哥金句',url:'quotes.html',kw:'金句 名言 买个der 急于掏钱 现金流'},{title:'实战案例',url:'cases.html',kw:'案例 实战 选车 真实 场景'},{title:'投稿故事',url:'stories.html',kw:'故事 投稿 车友 分享 经历'},{title:'购车清单',url:'checklist.html',kw:'清单 检查 提车 验车 注意事项'},{title:'避坑指南',url:'pitfalls.html',kw:'避坑 坑 陷阱 骗局 注意'},{title:'FAQ精选',url:'faq.html',kw:'faq 问答 常见问题 预算 时机 油电 品牌 二手'},{title:'视频精选',url:'videos.html',kw:'视频 劝退 算账 选车 市场分析'},{title:'超哥推荐',url:'recommend.html',kw:'推荐 车型 值得买 性价比'},{title:'购车性格测试',url:'quiz.html',kw:'测试 性格 趣味 理性 面子 冲动'},{title:'超哥在线',url:'chat.html',kw:'在线 聊天 对话 AI 问答'},{title:'留言板',url:'board.html',kw:'留言 评论 车友 讨论'},{title:'超哥画像',url:'about.html',kw:'画像 人物 抖音 博主 超哥超车'}];
+function openSearch(){document.getElementById('searchOverlay').classList.add('open');document.getElementById('searchInput').focus()}
+function closeSearch(){document.getElementById('searchOverlay').classList.remove('open')}
+function doSearch(q){var r=document.getElementById('searchResults');if(!q.trim()){r.innerHTML='';return}var m=SEARCH_DATA.filter(function(d){return(d.title+d.kw).toLowerCase().indexOf(q.toLowerCase())>=0});if(m.length===0){r.innerHTML='<div class="search-no-result">没有找到相关页面</div>';return}r.innerHTML=m.map(function(d){return'<a class="search-result-item" href="'+d.url+'"><div class="sr-title">'+d.title+'</div><div class="sr-kw">'+d.kw+'</div></a>'}).join('')}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSearch()});
+var btt=document.getElementById('backToTop');if(btt){window.addEventListener('scroll',function(){btt.classList.toggle('show',window.scrollY>400)},{passive:true})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
+</script>
+
+</body>
+</html>
