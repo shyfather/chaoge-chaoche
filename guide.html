@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>购车流程图 · 超哥超车</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    /* ===== guide.html 页面专属样式 ===== */
+
+    /* 页面标题区 */
+    .page-hero {
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--rule);
+      text-align: center;
+      padding: 4.5rem 1.5rem 3rem;
+      background: radial-gradient(ellipse at 50% 0%, var(--bg2) 0%, var(--bg) 60%, var(--bg) 100%);
+    }
+    .page-hero::before {
+      content: '';
+      position: absolute;
+      top: -40%; left: 50%;
+      transform: translateX(-50%);
+      width: 90%; height: 140%;
+      background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 16%, transparent) 0%, color-mix(in srgb, var(--accent) 5%, transparent) 35%, transparent 65%);
+      filter: blur(20px);
+      pointer-events: none;
+    }
+    .page-hero > * { position: relative; z-index: 1; }
+    .page-hero h1 {
+      font-size: clamp(2rem, 6vw, 3rem);
+      font-weight: 700;
+      margin-bottom: 0.8rem;
+      letter-spacing: -0.02em;
+    }
+    .page-hero h1 .accent { color: var(--accent); }
+    .page-hero .sub {
+      color: var(--muted);
+      max-width: 580px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+    .hero-intro {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 2rem 1.5rem 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .hero-intro strong { color: var(--accent2); font-weight: 700; }
+
+    /* ===== 流程图 ===== */
+    .flow-wrap { max-width: 920px; margin: 0 auto; padding: 1.5rem 0 0; }
+    .flow { position: relative; padding: 1.5rem 0; }
+    /* 中轴线 */
+    .flow::before {
+      content: '';
+      position: absolute;
+      left: 50%; top: 0; bottom: 0;
+      width: 2px;
+      background: linear-gradient(180deg, var(--accent) 0%, var(--accent2) 100%);
+      transform: translateX(-50%);
+      border-radius: 2px;
+      opacity: 0.55;
+    }
+
+    .step { position: relative; width: 44%; margin-bottom: 2.4rem; }
+    .step.left { margin-right: auto; }
+    .step.right { margin-left: auto; }
+
+    /* 步骤节点圆 */
+    .step .node {
+      position: absolute;
+      top: 1.4rem;
+      width: 46px; height: 46px;
+      border-radius: 50%;
+      background: var(--bg2);
+      border: 2px solid var(--accent);
+      color: var(--accent);
+      font-weight: 700;
+      font-family: var(--font-mono);
+      font-size: 1.05rem;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 2;
+      box-shadow: 0 0 0 5px var(--bg), 0 4px 14px color-mix(in srgb, var(--accent) 30%, transparent);
+      transition: transform 0.25s, box-shadow 0.25s;
+    }
+    .step:hover .node { transform: scale(1.12); }
+    .step.left .node { right: calc(-6% - 23px); }
+    .step.right .node { left: calc(-6% - 23px); }
+
+    /* 节点下方流向箭头 */
+    .step:not(:last-child) .node::after {
+      content: '▼';
+      position: absolute;
+      top: calc(100% + 10px);
+      left: 50%;
+      transform: translateX(-50%);
+      color: var(--accent2);
+      font-size: 0.7rem;
+      opacity: 0.65;
+    }
+
+    /* 步骤卡片 */
+    .step-card {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 1.3rem 1.4rem;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.25s cubic-bezier(.4,0,.2,1), border-color 0.25s, box-shadow 0.25s;
+    }
+    .step.left .step-card { border-left: 3px solid var(--accent); }
+    .step.right .step-card { border-right: 3px solid var(--accent); }
+    .step-card:hover {
+      transform: translateY(-3px);
+      border-color: color-mix(in srgb, var(--accent) 40%, var(--rule));
+      box-shadow: var(--shadow);
+    }
+    .step-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 8%, transparent), transparent);
+      transition: left 0.6s ease;
+    }
+    .step-card:hover::after { left: 100%; }
+
+    .step-head {
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.7rem;
+      border-bottom: 1px solid var(--rule);
+    }
+    .step-head .icon { font-size: 1.2rem; line-height: 1; }
+    .step-name {
+      font-size: 1.12rem;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -0.01em;
+    }
+
+    .step-block { margin-bottom: 0.9rem; }
+    .step-block:last-child { margin-bottom: 0; }
+    .block-label {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 0.3rem;
+      display: flex; align-items: center; gap: 0.35rem;
+    }
+    .step-block.advice .block-label { color: var(--accent2); }
+    .step-block.pit .block-label { color: var(--accent3); }
+    .block-text {
+      font-size: 0.9rem;
+      color: var(--ink);
+      line-height: 1.65;
+      margin: 0;
+    }
+    .block-text.muted { color: var(--muted); }
+
+    /* ===== 时间线 ===== */
+    .timeline-section { padding-top: 1.5rem; }
+    .tl-intro {
+      color: var(--muted);
+      max-width: 680px;
+      margin-bottom: 1.8rem;
+      font-size: 0.95rem;
+    }
+    .tl-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.8rem;
+    }
+    .tl-card {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-top: 3px solid var(--accent2);
+      border-radius: var(--radius);
+      padding: 1.2rem 1rem;
+      position: relative;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .tl-card:hover { transform: translateY(-3px); border-top-color: var(--accent); }
+    .tl-phase {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+      margin-bottom: 0.4rem;
+    }
+    .tl-name { font-size: 1rem; font-weight: 700; color: var(--ink); margin-bottom: 0.4rem; }
+    .tl-dur {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--accent2);
+      margin-bottom: 0.5rem;
+    }
+    .tl-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.55; margin: 0; }
+
+    .tl-summary {
+      margin-top: 1.6rem;
+      background: color-mix(in srgb, var(--accent) 8%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      border-radius: 10px;
+      padding: 1.1rem 1.3rem;
+      display: flex; gap: 0.9rem; align-items: flex-start;
+    }
+    .tl-summary .tag {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--accent);
+      border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .tl-summary p { margin: 0; font-size: 0.92rem; line-height: 1.65; color: var(--ink); }
+    .tl-summary p strong { color: var(--accent); font-weight: 700; }
+
+    @media(max-width:768px){
+      .flow::before { left: 23px; transform: none; }
+      .step { width: auto; margin: 0 0 2rem 60px !important; }
+      .step.left .node, .step.right .node { left: -60px; right: auto; }
+      .step.left .step-card, .step.right .step-card { border-left: 3px solid var(--accent); border-right: 1px solid var(--rule); }
+      .tl-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media(max-width:480px){
+      .tl-grid { grid-template-columns: 1fr; }
+    }
+
+    /* 返回顶部 */
+    .back-to-top{position:fixed;bottom:2rem;right:2rem;width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s,transform 0.3s;z-index:90;box-shadow:var(--shadow)}
+    .back-to-top.show{opacity:1;pointer-events:auto}
+    .back-to-top:hover{transform:translateY(-3px)}
+
+    .fade-up { opacity: 0; animation: fadeUp 0.6s ease-out forwards; }
+    .d1 { animation-delay: 0.05s; } .d2 { animation-delay: 0.12s; } .d3 { animation-delay: 0.19s; }
+  </style>
+</head>
+<body>
+  <!-- 导航栏 -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">超哥<span class="accent">超车</span></a>
+      <div class="nav-right">
+        <div class="nav-links">
+          <a href="index.html">首页</a>
+          <a href="models.html">模型</a>
+          <a href="guide.html" class="active">流程</a>
+          <a href="calculator.html">算账器</a>
+          <a href="loan.html">贷款</a>
+          <a href="database.html">车型库</a>
+          <a href="compare.html">对比</a>
+          <a href="ev-vs-gas.html">油电对比</a>
+          <a href="quotes.html">金句</a>
+          <a href="cases.html">案例</a>
+          <a href="stories.html">故事</a>
+          <a href="checklist.html">清单</a>
+          <a href="pitfalls.html">避坑</a>
+          <a href="faq.html">FAQ</a>
+          <a href="videos.html">视频</a>
+          <a href="recommend.html">推荐</a>
+          <a href="quiz.html">测试</a>
+          <a href="chat.html">在线</a>
+          <a href="board.html">留言</a>
+          <a href="about.html">画像</a>
+        </div>
+        <button class="nav-search-btn" onclick="openSearch()" title="搜索">🔍</button>
+        <div class="theme-switch">
+          <button class="theme-btn" onclick="toggleThemeMenu()" title="切换主题">🎨</button>
+          <div class="theme-menu" id="themeMenu">
+            <button class="theme-option" data-theme="dark" onclick="setTheme('dark')"><span class="theme-swatch" style="background:#0f1115;border-color:#ff6b35"></span>暗夜橙</button>
+            <button class="theme-option" data-theme="light" onclick="setTheme('light')"><span class="theme-swatch" style="background:#f8f9fa;border-color:#ff6b35"></span>极简白</button>
+            <button class="theme-option" data-theme="forest" onclick="setTheme('forest')"><span class="theme-swatch" style="background:#0a1f1c;border-color:#52d4a8"></span>墨绿森林</button>
+            <button class="theme-option" data-theme="cyber" onclick="setTheme('cyber')"><span class="theme-swatch" style="background:#0d0b1a;border-color:#c026d3"></span>暗紫赛博</button>
+            <button class="theme-option" data-theme="paper" onclick="setTheme('paper')"><span class="theme-swatch" style="background:#1a1612;border-color:#e8a87c"></span>暖纸棕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 页面内容 -->
+  <article class="page" style="padding:0;">
+    <!-- 页面标题区 -->
+    <section class="page-hero">
+      <span class="label-tag fade-up">实操指南</span>
+      <h1 class="fade-up d1">购车<span class="accent">流程图</span></h1>
+      <p class="sub fade-up d2">从动念头到开回家，九步走完。每一步超哥都给你撂句实在话，别图快，越急越容易被宰。</p>
+    </section>
+
+    <div class="hero-intro">
+      买车不是一拍脑门的事，是<strong>一套决策链</strong>。下面这九步按顺序来，急不得、跳不得——跳过哪步，哪步就给你埋雷。
+    </div>
+
+    <!-- 流程图 -->
+    <section style="border-bottom:1px solid var(--rule);">
+      <div class="flow-wrap">
+        <div class="flow">
+
+          <div class="step left">
+            <div class="node">1</div>
+            <div class="step-card">
+              <div class="step-head"><span class="icon">💰</span><span class="step-name">确定预算</span></div>
+              <div class="step-block advice">
+                <div class="block-label">● 超哥建议</div>
+                <p class="block-text">别拿“我能贷多少”当预算。先算清你每月能掏多少养车钱，再倒推出车价上限。买车钱只是首付，养车才是无底洞。</p>
+              </div>
+              <div class="step-block pit">
+                <div class="block-label">▲ 避坑提醒</div>
+                <p class="block-text muted">别把全部积蓄压在一台车上，留足 6 个月应急钱再谈买车。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="step right">
+            <div class="node">2</div>
+            <div class="step-card">
+              <div class="step-head"><span class="icon">🎯</span><span class="step-name">确认需求</span></div>
+              <div class="step-block advice">
+                <div class="block-label">● 超哥建议</div>
+                <p class="block-text">别盯着配置表选车，先想清楚：这车平时谁坐、跑什么路、一年开多少公里。需求没想明白，看啥都觉得香。</p>
+              </div>
+              <div class="step-block pit">
+                <div class="block-label">▲ 避坑提醒</div>
+                <p class="block-text muted">别为“万一用得上”的功能多花几万，九成的配置一年用不到 3 次。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="step left">
+            <div class="node">3</div>
+            <div class="step-card">
+              <div class="step-head"><span class="icon">🔍</span><span class="step-name">选车研究</span></div>
+              <div class="step-block advice">
+                <div class="block-label">● 超哥建议</div>
+                <p class="block-text">网上参数别全信，多看真实车主的吐槽，少看厂家宣传。保值率、故障率、保养成本这三样，比零百加速重要一百倍。</p>
+              </div>
+              <div class="step-block pit">
+                <div class="block-label">▲ 避坑提醒</div>
+                <p class="block-text muted">别被“限时优惠”催着下单，越催你掏钱的，越要冷静。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="step right">
+            <div class="node">4</div>
+            <div class="step-card">
+              <div class="step-head"><span class="icon">🔦</span><span class="step-name">实地看车</span></div>
+              <div class="step-block advice">
+                <div class="block-label">● 超哥建议</div>
+                <p class="block-text">展车都是灯光打得亮晶晶，带个手电筒去看缝隙、摸漆面、闻内饰。坐后排别光盯屏幕，量量头部腿部空间。</p>
+              </div>
+              <div class="step-block pit">
+                <div class="block-label">▲ 避坑提醒</div>
+                <p class="block-text muted">别只看一辆展车就走，跑两三家店，同样的车感受会不一样。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="step left">
+            <div class="node">5</div>
+            <div class="step-card">
+              <div class="step-head"><span class="icon">🚗</span><span class="step-name">试驾体验</span></div>
+              <div class="step-block advice">
+                <div class="block-label">● 超哥建议</div>
+                <p class="block-text">别只在 4S 店门口绕两圈。上环路、走烂路、试刹车。带个常坐车的人一起去，他坐得不舒服，这车就别买。</p>
+              </div>
+              <div class="step-block pit">
+                <div class="block-label">▲ 避坑提醒</div>
+                <p class="block-text muted">试驾车往往调得最顺，量产车可能更硬，别被试驾车骗了手感。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="step right">
+            <div class="node">6</div>
+            <div class="step-card">
+              <div class="step-head"><span class="icon">✋</span><span class="step-name">谈价砍价</span></div>
+              <div class="step-block advice">
+                <div class="block-label">● 超哥建议</div>
+                <p class="block-text">别一进店就报心理价，先让销售报价再往下砍。落地价要拆开算：裸车、购置税、保险、金融服务费，每一项都能挤水。</p>
+              </div>
+              <div class="step-block pit">
+                <div class="block-label">▲ 避坑提醒</div>
+                <p class="block-text muted">别被“送装饰”迷惑，那些精品进价几百、标价几千，要折现不要东西。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="step left">
+            <div class="node">7</div>
+            <div class="step-card">
+              <div class="step-head"><span class="icon">📝</span><span class="step-name">签合同</span></div>
+              <div class="step-block advice">
+                <div class="block-label">● 超哥建议</div>
+                <p class="block-text">别急着签字，每一行都看。车型、颜色、配置、提车时间、违约责任，白纸黑字写清楚，口头承诺一律不算数。</p>
+              </div>
+              <div class="step-block pit">
+                <div class="block-label">▲ 避坑提醒</div>
+                <p class="block-text muted">“订金”能退，“定金”不能退，一字之差坑死人，签字前先看是哪个 ding。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="step right">
+            <div class="node">8</div>
+            <div class="step-card">
+              <div class="step-head"><span class="icon">🔎</span><span class="step-name">验车提车</span></div>
+              <div class="step-block advice">
+                <div class="block-label">● 超哥建议</div>
+                <p class="block-text">别在 4S 店车库提车就走。把车开到光线好的地方，绕车三圈查漆面、看里程、对车架号。生产日期超半年就是库存车，得砍价。</p>
+              </div>
+              <div class="step-block pit">
+                <div class="block-label">▲ 避坑提醒</div>
+                <p class="block-text muted">别忘了索要合格证、一致性证书，没这俩上不了牌。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="step left">
+            <div class="node">9</div>
+            <div class="step-card">
+              <div class="step-head"><span class="icon">📜</span><span class="step-name">上牌保险</span></div>
+              <div class="step-block advice">
+                <div class="block-label">● 超哥建议</div>
+                <p class="block-text">保险别在 4S 店全买完，店里往往捆绑一堆没用的险种。交强险必买，商业险比三家，外面买能省一两千。</p>
+              </div>
+              <div class="step-block pit">
+                <div class="block-label">▲ 避坑提醒</div>
+                <p class="block-text muted">别图省事让 4S 店代办上牌，服务费能宰你一两千，自己去车管所半天搞定。</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 购车时间线 -->
+    <section class="timeline-section">
+      <h2><span class="num">⏱</span> 购车时间线建议</h2>
+      <p class="tl-intro">从决定买车到把车开回家，到底要多久？超哥给你画个时间线。别信销售说的“下周就能提”，<strong style="color:var(--accent2);">现车快、订车慢</strong>，心里有数才不慌。</p>
+
+      <div class="tl-grid">
+        <div class="tl-card">
+          <div class="tl-phase">PHASE 01</div>
+          <div class="tl-name">准备期</div>
+          <div class="tl-dur">1 ~ 2 周</div>
+          <p class="tl-desc">算总账、定需求、初筛 3-5 款候选车。</p>
+        </div>
+        <div class="tl-card">
+          <div class="tl-phase">PHASE 02</div>
+          <div class="tl-name">看车试驾</div>
+          <div class="tl-dur">2 ~ 3 周</div>
+          <p class="tl-desc">跑 2-3 家店、试驾 3-5 款，别只试一款。</p>
+        </div>
+        <div class="tl-card">
+          <div class="tl-phase">PHASE 03</div>
+          <div class="tl-name">谈价下定</div>
+          <div class="tl-dur">约 1 周</div>
+          <p class="tl-desc">对比报价、砍价、签合同、交定金。</p>
+        </div>
+        <div class="tl-card">
+          <div class="tl-phase">PHASE 04</div>
+          <div class="tl-name">等车提车</div>
+          <div class="tl-dur">2 ~ 8 周</div>
+          <p class="tl-desc">现车 1-2 周，订车 1-2 个月，热门款更久。</p>
+        </div>
+        <div class="tl-card">
+          <div class="tl-phase">PHASE 05</div>
+          <div class="tl-name">上牌保险</div>
+          <div class="tl-dur">约 1 周</div>
+          <p class="tl-desc">交购置税、上牌、买保险，齐活儿。</p>
+        </div>
+      </div>
+
+      <div class="tl-summary">
+        <span class="tag">总账</span>
+        <p>顺利的话，<strong>1 个月</strong>能把车开回家；热门订车款可能拖到 <strong>2-3 个月</strong>。记住超哥这句话：车是迟早能买到的，<strong>越急越容易被宰</strong>，把节奏攥在自己手里。</p>
+      </div>
+    </section>
+  <div class="share-bar">
+    <span class="share-label">分享：</span>
+    <button class="share-btn" onclick="navigator.clipboard.writeText(window.location.href).then(()=>{this.textContent='已复制!';setTimeout(()=>this.textContent='复制链接',1500)})">复制链接</button>
+    <button class="share-btn" onclick="window.open('https://service.weibo.com/share/share.php?url='+encodeURIComponent(window.location.href)+'&title='+encodeURIComponent(document.title))">微博</button>
+  </div>
+
+  </article>
+
+  <!-- 返回顶部按钮 -->
+  <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部">↑</button>
+
+  <!-- 公共脚本 -->
+  <script>
+  function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('chaoge-theme',t)}catch(e){}document.querySelectorAll('.theme-option').forEach(o=>o.classList.toggle('active',o.dataset.theme===t))}
+  function toggleThemeMenu(){document.getElementById('themeMenu').classList.toggle('open')}
+  document.addEventListener('click',e=>{if(!e.target.closest('.theme-switch'))document.getElementById('themeMenu')?.classList.remove('open')});
+  (function(){try{const t=localStorage.getItem('chaoge-theme')||'dark';setTheme(t)}catch(e){setTheme('dark')}})();
+  window.addEventListener('scroll',function(){var n=document.querySelector('.nav');if(n)n.classList.toggle('scrolled',window.scrollY>10)},{passive:true});
+  var btt=document.getElementById('backToTop');if(btt){window.addEventListener('scroll',function(){btt.classList.toggle('show',window.scrollY>400)},{passive:true})}
+  </script>
+<div class="search-overlay" id="searchOverlay" onclick="if(event.target===this)closeSearch()">
+    <div class="search-box">
+      <input type="text" class="search-input" id="searchInput" placeholder="搜索页面内容..." oninput="doSearch(this.value)">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+  </div>
+
+  <script>
+var SEARCH_DATA=[{title:'首页',url:'index.html',kw:'首页 超哥 超车 思维 心智模型 认知 概览'},{title:'八大心智模型',url:'models.html',kw:'模型 经济账本 劝退 需求锚点 时机 短板 面子 马力过剩 油电分层'},{title:'购车流程图',url:'guide.html',kw:'流程 指南 预算 选车 看车 试驾 谈价 合同 验车 提车'},{title:'购车算账器',url:'calculator.html',kw:'算账 计算 折旧 保险 保养 油费 总成本'},{title:'贷款计算器',url:'loan.html',kw:'贷款 月供 利息 首付 计算 金融'},{title:'车型库',url:'database.html',kw:'车型 数据库 筛选 推荐 卡罗拉 思域 凯美瑞 雅阁'},{title:'车型对比',url:'compare.html',kw:'对比 比较 车型 参数 优缺点'},{title:'油电对比',url:'ev-vs-gas.html',kw:'油车 电车 新能源 对比 油费 电费 保值率'},{title:'超哥金句',url:'quotes.html',kw:'金句 名言 买个der 急于掏钱 现金流'},{title:'实战案例',url:'cases.html',kw:'案例 实战 选车 真实 场景'},{title:'投稿故事',url:'stories.html',kw:'故事 投稿 车友 分享 经历'},{title:'购车清单',url:'checklist.html',kw:'清单 检查 提车 验车 注意事项'},{title:'避坑指南',url:'pitfalls.html',kw:'避坑 坑 陷阱 骗局 注意'},{title:'FAQ精选',url:'faq.html',kw:'faq 问答 常见问题 预算 时机 油电 品牌 二手'},{title:'视频精选',url:'videos.html',kw:'视频 劝退 算账 选车 市场分析'},{title:'超哥推荐',url:'recommend.html',kw:'推荐 车型 值得买 性价比'},{title:'购车性格测试',url:'quiz.html',kw:'测试 性格 趣味 理性 面子 冲动'},{title:'超哥在线',url:'chat.html',kw:'在线 聊天 对话 AI 问答'},{title:'留言板',url:'board.html',kw:'留言 评论 车友 讨论'},{title:'超哥画像',url:'about.html',kw:'画像 人物 抖音 博主 超哥超车'}];
+function openSearch(){document.getElementById('searchOverlay').classList.add('open');document.getElementById('searchInput').focus()}
+function closeSearch(){document.getElementById('searchOverlay').classList.remove('open')}
+function doSearch(q){var r=document.getElementById('searchResults');if(!q.trim()){r.innerHTML='';return}var m=SEARCH_DATA.filter(function(d){return(d.title+d.kw).toLowerCase().indexOf(q.toLowerCase())>=0});if(m.length===0){r.innerHTML='<div class="search-no-result">没有找到相关页面</div>';return}r.innerHTML=m.map(function(d){return'<a class="search-result-item" href="'+d.url+'"><div class="sr-title">'+d.title+'</div><div class="sr-kw">'+d.kw+'</div></a>'}).join('')}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSearch()});
+var btt=document.getElementById('backToTop');if(btt){window.addEventListener('scroll',function(){btt.classList.toggle('show',window.scrollY>400)},{passive:true})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
+</script>
+
+</body>
+</html>
