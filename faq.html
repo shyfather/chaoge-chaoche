@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FAQ精选 · 超哥超车</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    /* ===== faq.html 页面专属样式 ===== */
+
+    .page-hero {
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--rule);
+    }
+    .page-hero::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      height: 130%;
+      background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 18%, transparent) 0%, color-mix(in srgb, var(--accent) 5%, transparent) 35%, transparent 65%);
+      filter: blur(22px);
+      pointer-events: none;
+    }
+    .page-hero-inner { position: relative; z-index: 1; }
+
+    /* 主题区块 */
+    .faq-topic { padding: 2.6rem 0; border-bottom: 1px solid var(--rule); }
+    .faq-topic:last-of-type { border-bottom: none; }
+    .topic-head {
+      display: flex;
+      align-items: baseline;
+      gap: 0.7rem;
+      margin-bottom: 1.4rem;
+    }
+    .topic-num {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--accent);
+      font-weight: 400;
+      flex-shrink: 0;
+    }
+    .topic-title {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: var(--accent2);
+      letter-spacing: -0.01em;
+    }
+    .topic-rule {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, color-mix(in srgb, var(--accent2) 30%, transparent), transparent);
+      margin-left: 0.3rem;
+    }
+    .topic-count {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    /* 手风琴项 */
+    .faq-item {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      margin-bottom: 0.7rem;
+      overflow: hidden;
+      transition: border-color 0.25s, background 0.25s;
+    }
+    .faq-item:hover { border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+    .faq-item.open {
+      border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+      background: color-mix(in srgb, var(--accent) 4%, var(--bg2));
+    }
+    .faq-q {
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      color: var(--ink);
+      font-family: var(--font);
+      font-size: 1.02rem;
+      font-weight: 600;
+      padding: 1.1rem 1.3rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      line-height: 1.5;
+    }
+    .faq-q-text { flex: 1; }
+    .faq-q-text .q-mark {
+      color: var(--accent);
+      font-family: var(--font-mono);
+      margin-right: 0.4rem;
+      font-size: 0.9rem;
+    }
+    .faq-toggle {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--bg3);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.1rem;
+      font-weight: 400;
+      transition: transform 0.3s ease, background 0.25s;
+      line-height: 1;
+    }
+    .faq-item.open .faq-toggle {
+      transform: rotate(45deg);
+      background: color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+
+    /* 用 grid 实现高度自适应展开动画 */
+    .faq-a {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.35s ease;
+    }
+    .faq-a > .faq-a-wrap { overflow: hidden; }
+    .faq-item.open .faq-a { grid-template-rows: 1fr; }
+    .faq-a-inner {
+      padding: 0 1.3rem 1.2rem;
+      color: var(--muted);
+      line-height: 1.85;
+      font-size: 0.95rem;
+    }
+    .faq-a-inner .answer-tag {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--accent2);
+      background: color-mix(in srgb, var(--accent2) 12%, transparent);
+      padding: 0.15rem 0.55rem;
+      border-radius: 20px;
+      margin-bottom: 0.7rem;
+      letter-spacing: 0.04em;
+    }
+    .faq-a-inner mark.key { background: none; color: var(--accent); font-weight: 600; }
+
+    /* 展开全部 / 收起全部 */
+    .faq-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.6rem;
+    }
+    .faq-toolbar .hint {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-family: var(--font-mono);
+    }
+    .faq-toolbar .btn-mini {
+      background: none;
+      border: 1px solid var(--rule);
+      color: var(--muted);
+      padding: 0.45rem 0.9rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-family: var(--font);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .faq-toolbar .btn-mini:hover {
+      color: var(--accent);
+      border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    }
+
+    /* CTA */
+    .cta {
+      text-align: center;
+      padding: 4rem 1.5rem !important;
+      background: radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 70%);
+    }
+    .cta h2 { justify-content: center; }
+    .cta-btn {
+      display: inline-block;
+      padding: 1rem 2.6rem;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.15rem;
+      text-decoration: none;
+      transition: all 0.2s;
+      box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 30%, transparent);
+    }
+    .cta-btn:hover {
+      background: color-mix(in srgb, var(--accent) 85%, #000);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+    .cta-sub { margin-top: 1rem; color: var(--muted); font-size: 0.95rem; }
+
+    footer .copyright { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
+
+    .fade-up { opacity: 0; animation: fadeUp 0.6s ease-out forwards; }
+    .d1 { animation-delay: 0.05s; }
+    .d2 { animation-delay: 0.12s; }
+
+    .back-to-top{position:fixed;bottom:2rem;right:2rem;width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s,transform 0.3s;z-index:90;box-shadow:var(--shadow)}
+    .back-to-top.show{opacity:1;pointer-events:auto}
+    .back-to-top:hover{transform:translateY(-3px)}
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">超哥<span class="accent">超车</span></a>
+      <div class="nav-right">
+        <div class="nav-links">
+          <a href="index.html">首页</a>
+          <a href="models.html">模型</a>
+          <a href="guide.html">流程</a>
+          <a href="calculator.html">算账器</a>
+          <a href="loan.html">贷款</a>
+          <a href="database.html">车型库</a>
+          <a href="compare.html">对比</a>
+          <a href="ev-vs-gas.html">油电对比</a>
+          <a href="quotes.html">金句</a>
+          <a href="cases.html">案例</a>
+          <a href="stories.html">故事</a>
+          <a href="checklist.html">清单</a>
+          <a href="pitfalls.html">避坑</a>
+          <a href="faq.html" class="active">FAQ</a>
+          <a href="videos.html">视频</a>
+          <a href="recommend.html">推荐</a>
+          <a href="quiz.html">测试</a>
+          <a href="chat.html">在线</a>
+          <a href="board.html">留言</a>
+          <a href="about.html">画像</a>
+        </div>
+        <button class="nav-search-btn" onclick="openSearch()" title="搜索">🔍</button>
+        <div class="theme-switch">
+          <button class="theme-btn" onclick="toggleThemeMenu()" title="切换主题">🎨</button>
+          <div class="theme-menu" id="themeMenu">
+            <button class="theme-option" data-theme="dark" onclick="setTheme('dark')"><span class="theme-swatch" style="background:#0f1115;border-color:#ff6b35"></span>暗夜橙</button>
+            <button class="theme-option" data-theme="light" onclick="setTheme('light')"><span class="theme-swatch" style="background:#f8f9fa;border-color:#ff6b35"></span>极简白</button>
+            <button class="theme-option" data-theme="forest" onclick="setTheme('forest')"><span class="theme-swatch" style="background:#0a1f1c;border-color:#52d4a8"></span>墨绿森林</button>
+            <button class="theme-option" data-theme="cyber" onclick="setTheme('cyber')"><span class="theme-swatch" style="background:#0d0b1a;border-color:#c026d3"></span>暗紫赛博</button>
+            <button class="theme-option" data-theme="paper" onclick="setTheme('paper')"><span class="theme-swatch" style="background:#1a1612;border-color:#e8a87c"></span>暖纸棕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <article class="page">
+    <section class="page-hero" style="text-align:center;padding:4rem 0 2.5rem;">
+      <div class="page-hero-inner">
+        <span class="label-tag fade-up">常见问题</span>
+        <h1 class="fade-up d1" style="font-size:clamp(2rem,6vw,3rem);font-weight:700;margin-bottom:0.8rem;">FAQ<span class="gradient-text">精选</span></h1>
+        <p class="fade-up d2" style="color:var(--muted);max-width:580px;margin:0 auto;line-height:1.7;">关于买车最常被问到的21个问题，超哥一次性给你说实话。点开就有答案，不绕弯子。</p>
+      </div>
+    </section>
+
+    <section style="padding-top:2rem;">
+      <div class="faq-toolbar">
+        <span class="hint">点问题即可展开 / 收起</span>
+        <div style="display:flex;gap:0.6rem;">
+          <button class="btn-mini" onclick="expandAll(true)">全部展开</button>
+          <button class="btn-mini" onclick="expandAll(false)">全部收起</button>
+        </div>
+      </div>
+
+      <!-- 主题1：预算篇 -->
+      <div class="faq-topic" id="topic-1">
+        <div class="topic-head">
+          <span class="topic-num">01</span>
+          <h2 class="topic-title">预算篇</h2>
+          <span class="topic-rule"></span>
+          <span class="topic-count">4 问</span>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q1</span>月薪5000能买什么车？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            直说吧，月薪5000别买新车。养一辆车一年最少<mark class="key">1.5万</mark>（保险+保养+油钱+停车），分摊到月就是1250，占你收入四分之一。再加上折旧这台"沉默粉碎机"，你扛不住。真要代步，买个3-5万的二手飞度、POLO，或者干脆地铁+电驴。<mark class="key">买车是为生活服务，不是拖累生活</mark>——月薪5000硬上新车，那就是给生活添堵。
+          </div></div></div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q2</span>10万预算选油车还是电车？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            10万这个段位，2026年我建议油车。原因有三：一是10万电车要么续航短要么配置抠，二是同价位油车降价后性价比拉满（朗逸、轩逸落地不到9万），三是10万电车保值率比20万的还惨，<mark class="key">三年腰斩</mark>。你一年跑不到1.5万公里，省的那点电费根本补不回保值率的窟窿。记住：省钱别省在保值率上。
+          </div></div></div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q3</span>预算20万买BBA还是国产？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            20万是个分水岭。要面子、开得少、打算开8年以上——二手BBA或者降价后的BBA入门款可以考虑（现在3系、C级优惠大）。要务实、家用、图省心——国产新势力或比亚迪汉、领克这些，配置吊打同价位BBA。但别贷款买20万的车撑面子，<mark class="key">收入不稳定时一辆车能拖垮你的生活</mark>。先问自己：这20万是存款还是借的？借的就别想BBA了。
+          </div></div></div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q4</span>贷款买车首付多少合适？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            能全款就别贷款，贷款就是给银行打工。非要贷，首付别低于<mark class="key">50%</mark>，年限别超3年，月供别超过月收入的20%。那些"0首付、5年0息"的套路，羊毛出在羊身上——车价给你涨回去，保险捆绑销售，违约金埋雷。你干个蛋，以为自己赚了，其实裸车价多掏了1万。记住：<mark class="key">急于掏钱要吃亏</mark>。
+          </div></div></div>
+        </div>
+      </div>
+
+      <!-- 主题2：时机篇 -->
+      <div class="faq-topic" id="topic-2">
+        <div class="topic-head">
+          <span class="topic-num">02</span>
+          <h2 class="topic-title">时机篇</h2>
+          <span class="topic-rule"></span>
+          <span class="topic-count">4 问</span>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q5</span>现在买油车划算吗？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            2026年这个节点，油车大降价是真的划算。BBA优惠<mark class="key">10万+</mark>，合资中级车落地价比三年前便宜3-5万，这是实打实的让利。但"划算"有个前提：你确实需要车、且打算长期持有（5年以上）。如果只是觉得便宜想捡漏，捡完发现还要养、还要贬值，那就是另一个坑。急用车就买，不急就再等等年底冲量。
+          </div></div></div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q6</span>新能源还会降价吗？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            一定还会降。电池成本在跌，技术迭代快——今年买的800V平台，明年可能就成"上一代"。小米、华为、比亚迪在互相卷价格，谁先停谁死。所以买电车别追"最新款"，追<mark class="key">"够用+降价到位"</mark>。真要买，盯准年底或新车上市后老款清库存的时机。别当那个高位接盘侠。
+          </div></div></div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q7</span>年底买车便宜还是年初？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            年底便宜，尤其12月。原因：4S店要冲销量拿厂家返点，销售要完成KPI，这时候议价空间最大，赠品也最舍得给。但别傻乎乎12月31号去，那时候任务早完成了，反而不急。最佳窗口是<mark class="key">11月中到12月中</mark>，这时候他们最焦虑。年初（1-3月）是淡季，价格反而硬，因为新一年任务刚开始。
+          </div></div></div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q8</span>等新款还是买现款？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            看你等多久。新款3-6个月内上市——等，老款到时候清库存更便宜，新款也更香。新款还要一年半载——别等，早买早享受，技术迭代这东西永远等不完，今天的新款明年就是老款。油车等新款意义不大（变化小），电车等新款有意义（续航、智驾升级大）。但记住：<mark class="key">等降价、等新款、等补贴，别急于掏钱</mark>。
+          </div></div></div>
+        </div>
+      </div>
+
+      <!-- 主题3：油电篇 -->
+      <div class="faq-topic" id="topic-3">
+        <div class="topic-head">
+          <span class="topic-num">03</span>
+          <h2 class="topic-title">油电篇</h2>
+          <span class="topic-rule"></span>
+          <span class="topic-count">4 问</span>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q9</span>第一台车买油车还是电车？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            普通家庭第一台车，2026年我倾向油车。为什么？电车好是好，但它有个致命前提——你得有<mark class="key">固定车位能装充电桩</mark>。没有家充，靠公共桩，体验直接打七折（贵、慢、抢不到）。第一台车讲究的是"省心无脑用"，油车加油5分钟走人，没有续航焦虑，没有冬天掉电，二手好出手。第二台车再考虑电车，那是另一个故事。
+          </div></div></div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q10</span>插混和纯电怎么选？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            只有一台车、有长途需求、又想省油——插混（或增程）是最优解。市区用电省钱，长途用油不焦虑，两头兼顾。纯电适合：家里已经有油车、纯市区代步、有家充的人。注意插混的坑：很多插混纯电续航才50-80km，电池小天天充也烦，馈电油耗还比纯油高。选插混认准纯电续航<mark class="key">100km以上</mark>的。
+          </div></div></div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q11</span>增程式是什么？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            增程式就是<mark class="key">"带个充电宝的电车"</mark>。发动机不直接驱动车轮，只负责发电，电机驱动。好处：纯电驾驶体验、没有续航焦虑（没电了发动机接着发电）、结构比插混简单。坏处：高速馈电油耗偏高（发动机发电有损耗）、发动机介入时NVH不如纯电。理想、问界M7都是增程。家用、跑长途多、想要电车体验又怕充电难的，增程真香。
+          </div></div></div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q12</span>电车保值率真的很差吗？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            真差，比你想的还差。三年电车残值普遍跌到40%-50%，五年能到35%就不错了，同期油车还有50%以上。原因：电池衰减不可逆、技术迭代太快（老款成"电子古董"）、二手市场对电车接受度低。所以买电车一定要算清楚：省的油钱能不能覆盖保值率的损失。跑得少别买电车，跑得多再考虑。<mark class="key">别光看省油钱，算算总账再说</mark>。
+          </div></div></div>
+        </div>
+      </div>
+
+      <!-- 主题4：品牌篇 -->
+      <div class="faq-topic" id="topic-4">
+        <div class="topic-head">
+          <span class="topic-num">04</span>
+          <h2 class="topic-title">品牌篇</h2>
+          <span class="topic-rule"></span>
+          <span class="topic-count">4 问</span>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q13</span>BBA真的值得买吗？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            看你图什么。图品牌面子、社交属性——值，BBA的标在中国就是硬通货。图性价比、配置——不值，30万的BBA配置不如15万的国产。图省心保值——值，BBA保值率和售后网络是优势。但2026年BBA在降价，3系、C级优惠大，这时候入手比前两年划算。前提是别贷款硬上，年收入覆盖不了车价的，<mark class="key">劝你买个der</mark>。
+          </div></div></div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q14</span>国产车现在靠谱吗？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            靠谱，而且越来越靠谱。比亚迪、吉利、长安、奇瑞这些传统大厂，三大件技术成熟，毛病少，售后网点多。新势力（蔚来、理想、小鹏、问界）智能化强但存亡有风险。选国产别迷信"网红款"，看<mark class="key">销量排行</mark>——卖得多的车型经过市场验证，配件好找，保值率也相对稳。国产油车现在真不输合资，别用十年前的老眼光看。
+          </div></div></div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q15</span>日系德系谁更省心？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            论省心，日系赢。丰田、本田的发动机变速箱开十年不大修，保养便宜，配件满街都是——这就是<mark class="key">"开不坏的丰田"</mark>。德系（大众、BBA）机械素质好、底盘扎实、驾驶质感强，但小毛病多、维修贵、上了年头烧机油漏油是通病。家用图省心选日系，图驾驶质感和面子选德系。记住：省心=省钱，修车的时间成本也是钱。
+          </div></div></div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q16</span>新势力品牌能买吗？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            能买，但要看是哪家、活没活下去。头部（理想、问界、蔚来、小鹏、小米）相对稳，背靠大厂或融资足，售后有保障。尾部那些听都没听过的新势力，劝你绕道——倒闭了你的车就成了<mark class="key">"电子孤儿"</mark>，OTA没有、配件没有、二手没人接盘。买新势力就买销量前三的，别当小白鼠。还有，新势力溢价高，算账时把保值率往低了估。
+          </div></div></div>
+        </div>
+      </div>
+
+      <!-- 主题5：二手篇 -->
+      <div class="faq-topic" id="topic-5">
+        <div class="topic-head">
+          <span class="topic-num">05</span>
+          <h2 class="topic-title">二手篇</h2>
+          <span class="topic-rule"></span>
+          <span class="topic-count">5 问</span>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q17</span>二手车值得买吗？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            值得，但要懂行或找懂行的人。二手车最大的价值是<mark class="key">"让别人替你承担折旧"</mark>——新车落地打八折，三年贬值30%-40%，你买三年车龄的，省的就是这笔。预算有限又想要好车，二手车是捷径。但水很深：事故车、泡水车、调表车防不胜防。不会看的，要么找第三方检测（花几百块省几万），要么走官方认证二手车（贵点但有质保）。
+          </div></div></div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q18</span>买二手车怎么避坑？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            四条铁律：一查维修保养记录（4S店记录+保险出险记录，调表车一查就露馅）；二看手续（登记证、行驶证、购置税完税证明，缺一不可，抵押车千万别碰）；三找第三方检测（花500块，省的是几万块的事故车）；四别信"美女一手车、急用钱便宜卖"这种话术。还有，签合同必须写明<mark class="key">"保证无事故、无泡水、无调表，否则退款"</mark>。
+          </div></div></div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q19</span>准新车划算吗？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            准新车（1年内、1万公里以内）划算，是二手里的甜区。折旧已经替你扛了一波（省购置税+几万块贬值），车况几乎和新的一样，质保还在。比新车便宜<mark class="key">10%-15%</mark>，比三年二手车况好。但注意：要确认是真实私家车置换，不是展厅车、试驾车、运损车翻新。4S店的"官方认证准新"贵一点但踏实。买准新车，等于让前任车主替你交了购置税。
+          </div></div></div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q20</span>二手车贷款注意什么？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            二手车贷款水更深，坑更多。一是利率高（比新车高2-3个点），二是评估价压得低，三是GPS费、服务费、抵押费各种名目收费，四是提前还款违约金高。能全款就全款。非要贷，找银行直贷别找车商金融，看清楚<mark class="key">年化利率</mark>（不是月息），算清楚总利息。二手车商推荐的贷款，他抽成能占利息的三成。你干个蛋，以为自己分期轻松，实际多花一台手机的钱。
+          </div></div></div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-q" onclick="toggleFaq(this)"><span class="faq-q-text"><span class="q-mark">Q21</span>多少公里的二手车不能买？</span><span class="faq-toggle">+</span></button>
+          <div class="faq-a"><div class="faq-a-wrap"><div class="faq-a-inner">
+            <span class="answer-tag">超哥回答</span>
+            家用车超过<mark class="key">15万公里</mark>要慎重，超过20万公里基本别碰。发动机变速箱大修的概率随里程飙升，买回来修车的钱可能比车价还高。但出租车、网约车退役的更狠——它们一年能跑10万公里，3年30万公里，调表调回8万你根本看不出来。所以买二手车，看里程不如看用途和车况：私家车15万公里可能比网约车5万公里还靠谱。查保养记录+第三方检测，比盯里程数管用。
+          </div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <h2>还有想不通的？</h2>
+      <p class="cta-sub" style="margin-bottom:1.6rem;max-width:520px;margin-left:auto;margin-right:auto;">上面的答案不够具体？把你的真实情况告诉超哥，给你量身定制的实在话。</p>
+      <a class="cta-btn" href="chat.html">问超哥去</a>
+      <p class="cta-sub">别急，想清楚再掏钱</p>
+    </section>
+  </article>
+
+  <div class="share-bar">
+    <span class="share-label">分享：</span>
+    <button class="share-btn" onclick="navigator.clipboard.writeText(window.location.href).then(()=>{this.textContent='已复制!';setTimeout(()=>this.textContent='复制链接',1500)})">复制链接</button>
+    <button class="share-btn" onclick="window.open('https://service.weibo.com/share/share.php?url='+encodeURIComponent(window.location.href)+'&title='+encodeURIComponent(document.title))">微博</button>
+  </div>
+
+    <footer>
+    <p class="trust">买车是为生活服务，不是拖累生活。</p>
+    <p class="copyright">© 2026 超哥超车 · 劝退式买车思维视角 · 抖音 @超哥超车 cgcc666</p>
+  </footer>
+
+  <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部">↑</button>
+
+  <script>
+  function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('chaoge-theme',t)}catch(e){}document.querySelectorAll('.theme-option').forEach(o=>o.classList.toggle('active',o.dataset.theme===t))}
+  function toggleThemeMenu(){document.getElementById('themeMenu').classList.toggle('open')}
+  document.addEventListener('click',e=>{if(!e.target.closest('.theme-switch'))document.getElementById('themeMenu')?.classList.remove('open')});
+  (function(){try{const t=localStorage.getItem('chaoge-theme')||'dark';setTheme(t)}catch(e){setTheme('dark')}})();
+  window.addEventListener('scroll',function(){var n=document.querySelector('.nav');if(n)n.classList.toggle('scrolled',window.scrollY>10)},{passive:true});
+  var btt=document.getElementById('backToTop');if(btt){window.addEventListener('scroll',function(){btt.classList.toggle('show',window.scrollY>400)},{passive:true})}
+
+  // ===== FAQ 手风琴逻辑 =====
+  function toggleFaq(btn){
+    var item = btn.parentElement;
+    var isOpen = item.classList.contains('open');
+    item.classList.toggle('open', !isOpen);
+  }
+  function expandAll(open){
+    document.querySelectorAll('.faq-item').forEach(function(item){
+      item.classList.toggle('open', open);
+    });
+  }
+  </script>
+<div class="search-overlay" id="searchOverlay" onclick="if(event.target===this)closeSearch()">
+    <div class="search-box">
+      <input type="text" class="search-input" id="searchInput" placeholder="搜索页面内容..." oninput="doSearch(this.value)">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+  </div>
+
+  <script>
+var SEARCH_DATA=[{title:'首页',url:'index.html',kw:'首页 超哥 超车 思维 心智模型 认知 概览'},{title:'八大心智模型',url:'models.html',kw:'模型 经济账本 劝退 需求锚点 时机 短板 面子 马力过剩 油电分层'},{title:'购车流程图',url:'guide.html',kw:'流程 指南 预算 选车 看车 试驾 谈价 合同 验车 提车'},{title:'购车算账器',url:'calculator.html',kw:'算账 计算 折旧 保险 保养 油费 总成本'},{title:'贷款计算器',url:'loan.html',kw:'贷款 月供 利息 首付 计算 金融'},{title:'车型库',url:'database.html',kw:'车型 数据库 筛选 推荐 卡罗拉 思域 凯美瑞 雅阁'},{title:'车型对比',url:'compare.html',kw:'对比 比较 车型 参数 优缺点'},{title:'油电对比',url:'ev-vs-gas.html',kw:'油车 电车 新能源 对比 油费 电费 保值率'},{title:'超哥金句',url:'quotes.html',kw:'金句 名言 买个der 急于掏钱 现金流'},{title:'实战案例',url:'cases.html',kw:'案例 实战 选车 真实 场景'},{title:'投稿故事',url:'stories.html',kw:'故事 投稿 车友 分享 经历'},{title:'购车清单',url:'checklist.html',kw:'清单 检查 提车 验车 注意事项'},{title:'避坑指南',url:'pitfalls.html',kw:'避坑 坑 陷阱 骗局 注意'},{title:'FAQ精选',url:'faq.html',kw:'faq 问答 常见问题 预算 时机 油电 品牌 二手'},{title:'视频精选',url:'videos.html',kw:'视频 劝退 算账 选车 市场分析'},{title:'超哥推荐',url:'recommend.html',kw:'推荐 车型 值得买 性价比'},{title:'购车性格测试',url:'quiz.html',kw:'测试 性格 趣味 理性 面子 冲动'},{title:'超哥在线',url:'chat.html',kw:'在线 聊天 对话 AI 问答'},{title:'留言板',url:'board.html',kw:'留言 评论 车友 讨论'},{title:'超哥画像',url:'about.html',kw:'画像 人物 抖音 博主 超哥超车'}];
+function openSearch(){document.getElementById('searchOverlay').classList.add('open');document.getElementById('searchInput').focus()}
+function closeSearch(){document.getElementById('searchOverlay').classList.remove('open')}
+function doSearch(q){var r=document.getElementById('searchResults');if(!q.trim()){r.innerHTML='';return}var m=SEARCH_DATA.filter(function(d){return(d.title+d.kw).toLowerCase().indexOf(q.toLowerCase())>=0});if(m.length===0){r.innerHTML='<div class="search-no-result">没有找到相关页面</div>';return}r.innerHTML=m.map(function(d){return'<a class="search-result-item" href="'+d.url+'"><div class="sr-title">'+d.title+'</div><div class="sr-kw">'+d.kw+'</div></a>'}).join('')}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSearch()});
+var btt=document.getElementById('backToTop');if(btt){window.addEventListener('scroll',function(){btt.classList.toggle('show',window.scrollY>400)},{passive:true})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
+</script>
+
+</body>
+</html>
