@@ -236,25 +236,45 @@
       <div class="nav-right">
         <div class="nav-links">
           <a href="index.html" class="active">首页</a>
-          <a href="models.html">模型</a>
-          <a href="guide.html">流程</a>
-          <a href="calculator.html">算账器</a>
-          <a href="loan.html">贷款</a>
-          <a href="database.html">车型库</a>
-          <a href="compare.html">对比</a>
-          <a href="ev-vs-gas.html">油电对比</a>
-          <a href="quotes.html">金句</a>
-          <a href="cases.html">案例</a>
-          <a href="stories.html">故事</a>
-          <a href="checklist.html">清单</a>
-          <a href="pitfalls.html">避坑</a>
-          <a href="faq.html">FAQ</a>
-          <a href="videos.html">视频</a>
-          <a href="recommend.html">推荐</a>
-          <a href="quiz.html">测试</a>
-          <a href="chat.html">在线</a>
-          <a href="board.html">留言</a>
-          <a href="about.html">画像</a>
+          <div class="nav-group">
+            <button class="nav-group-btn">认知 <span class="caret">▾</span></button>
+            <div class="nav-dropdown">
+              <a href="models.html">心智模型</a>
+              <a href="quotes.html">超哥金句</a>
+              <a href="about.html">超哥画像</a>
+            </div>
+          </div>
+          <div class="nav-group">
+            <button class="nav-group-btn">工具 <span class="caret">▾</span></button>
+            <div class="nav-dropdown">
+              <a href="guide.html">购车流程</a>
+              <a href="calculator.html">算账器</a>
+              <a href="loan.html">贷款计算</a>
+              <a href="database.html">车型库</a>
+              <a href="compare.html">车型对比</a>
+              <a href="ev-vs-gas.html">油电对比</a>
+            </div>
+          </div>
+          <div class="nav-group">
+            <button class="nav-group-btn">指南 <span class="caret">▾</span></button>
+            <div class="nav-dropdown">
+              <a href="cases.html">实战案例</a>
+              <a href="stories.html">投稿故事</a>
+              <a href="checklist.html">购车清单</a>
+              <a href="pitfalls.html">避坑指南</a>
+              <a href="faq.html">FAQ精选</a>
+            </div>
+          </div>
+          <div class="nav-group">
+            <button class="nav-group-btn">互动 <span class="caret">▾</span></button>
+            <div class="nav-dropdown">
+              <a href="videos.html">视频精选</a>
+              <a href="recommend.html">超哥推荐</a>
+              <a href="quiz.html">性格测试</a>
+              <a href="chat.html">在线聊天</a>
+              <a href="board.html">留言板</a>
+            </div>
+          </div>
         </div>
         <button class="nav-search-btn" onclick="openSearch()" title="搜索">🔍</button>
         <div class="theme-switch">
@@ -451,6 +471,11 @@ function doSearch(q){var r=document.getElementById('searchResults');if(!q.trim()
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSearch()});
 var btt=document.getElementById('backToTop');if(btt){window.addEventListener('scroll',function(){btt.classList.toggle('show',window.scrollY>400)},{passive:true})}
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
+
+// 导航分组点击切换（手机端）
+document.querySelectorAll('.nav-group-btn').forEach(function(btn){btn.addEventListener('click',function(e){e.stopPropagation();var g=this.parentElement;var wasOpen=g.classList.contains('open');document.querySelectorAll('.nav-group.open').forEach(function(o){o.classList.remove('open')});if(!wasOpen)g.classList.add('open')})});
+document.addEventListener('click',function(){document.querySelectorAll('.nav-group.open').forEach(function(g){g.classList.remove('open')})});
+
 </script>
 
 </body>
