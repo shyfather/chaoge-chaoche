@@ -1,0 +1,10 @@
+{
+  "name": "超哥超车 - 劝退式买车思维视角",
+  "short_name": "超哥超车",
+  "description": "八大心智模型、15条决策启发式、购车算账器、在线对话",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0f1115",
+  "theme_color": "#ff6b35",
+  "scope": "."
+}
