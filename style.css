@@ -63,12 +63,12 @@ body > * { position:relative; z-index:2; }
 /* ===== 导航栏 ===== */
 .nav { position:sticky; top:0; z-index:100; background:var(--nav-bg); backdrop-filter:saturate(180%) blur(12px); border-bottom:1px solid transparent; transition:background 0.4s ease, border-color 0.3s ease, box-shadow 0.3s ease; }
 .nav.scrolled { border-bottom-color:var(--rule); box-shadow:0 1px 12px rgba(0,0,0,0.08); }
-.nav-inner { max-width:var(--max); margin:0 auto; padding:0.7rem 1.5rem; display:flex; align-items:center; gap:1.5rem; }
+.nav-inner { max-width:var(--max); margin:0 auto; padding:0.7rem 1.5rem; display:flex; align-items:center; gap:1.2rem; }
 .nav-brand { font-size:1.15rem; font-weight:700; color:var(--ink); text-decoration:none; white-space:nowrap; flex-shrink:0; }
 .nav-brand .accent { color:var(--accent); }
-.nav-right { display:flex; align-items:center; gap:0.4rem; flex:1; justify-content:center; min-width:0; }
-.nav-links { display:flex; gap:0.2rem; align-items:center; }
-.theme-switch { margin-left:auto; flex-shrink:0; }
+.nav-right { display:flex; align-items:center; gap:0.4rem; flex:1; min-width:0; }
+.nav-links { display:flex; gap:0; align-items:center; flex:1; justify-content:space-between; }
+.theme-switch { flex-shrink:0; }
 
 /* 分组下拉菜单 */
 .nav-group { position:relative; flex-shrink:0; }
