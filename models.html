@@ -634,6 +634,24 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch
 document.querySelectorAll('.nav-group-btn').forEach(function(btn){btn.addEventListener('click',function(e){e.stopPropagation();var g=this.parentElement;var wasOpen=g.classList.contains('open');document.querySelectorAll('.nav-group.open').forEach(function(o){o.classList.remove('open')});if(!wasOpen)g.classList.add('open')})});
 document.addEventListener('click',function(){document.querySelectorAll('.nav-group.open').forEach(function(g){g.classList.remove('open')})});
 
+
+// 导航分组：移动端click切换，桌面端纯hover不干预
+var isTouch = window.matchMedia('(hover: none)').matches;
+if (isTouch) {
+  document.querySelectorAll('.nav-group-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var g = this.parentElement;
+      var wasOpen = g.classList.contains('open');
+      document.querySelectorAll('.nav-group.open').forEach(function(o) { o.classList.remove('open'); });
+      if (!wasOpen) g.classList.add('open');
+    });
+  });
+  document.addEventListener('click', function() {
+    document.querySelectorAll('.nav-group.open').forEach(function(g) { g.classList.remove('open'); });
+  });
+}
+
 </script>
 
 </body>
