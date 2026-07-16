@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视频精选 · 超哥超车</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    /* ===== videos.html 页面专属样式 ===== */
+
+    .page-hero {
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--rule);
+    }
+    .page-hero::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      height: 130%;
+      background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 18%, transparent) 0%, color-mix(in srgb, var(--accent) 5%, transparent) 35%, transparent 65%);
+      filter: blur(22px);
+      pointer-events: none;
+    }
+    .page-hero-inner { position: relative; z-index: 1; }
+
+    /* 主题区块 */
+    .vid-topic { padding: 2.6rem 0; border-bottom: 1px solid var(--rule); }
+    .vid-topic:last-of-type { border-bottom: none; }
+    .topic-head {
+      display: flex;
+      align-items: baseline;
+      gap: 0.7rem;
+      margin-bottom: 1.5rem;
+    }
+    .topic-num {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--accent);
+      font-weight: 400;
+      flex-shrink: 0;
+    }
+    .topic-title {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: var(--accent2);
+      letter-spacing: -0.01em;
+    }
+    .topic-rule {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, color-mix(in srgb, var(--accent2) 30%, transparent), transparent);
+      margin-left: 0.3rem;
+    }
+    .topic-count {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    /* 视频卡片网格 */
+    .vid-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.2rem;
+    }
+    @media(max-width:900px){ .vid-grid{ grid-template-columns:1fr 1fr; } }
+    @media(max-width:600px){ .vid-grid{ grid-template-columns:1fr; } }
+
+    .vid-card {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: transform 0.25s cubic-bezier(.4,0,.2,1), border-color 0.25s, box-shadow 0.25s;
+      display: flex;
+      flex-direction: column;
+    }
+    .vid-card:hover {
+      transform: translateY(-4px);
+      border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+      box-shadow: 0 12px 30px color-mix(in srgb, var(--accent) 14%, transparent);
+    }
+
+    /* 缩略图区：CSS渐变 + emoji */
+    .vid-thumb {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .vid-thumb .emoji {
+      font-size: clamp(2.2rem, 6vw, 3rem);
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
+      transition: transform 0.3s ease;
+    }
+    .vid-card:hover .vid-thumb .emoji { transform: scale(1.12); }
+    .vid-thumb::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.18) 0%, transparent 55%);
+      pointer-events: none;
+    }
+    /* 缩略图角标：分类 */
+    .vid-thumb .corner {
+      position: absolute;
+      top: 0.6rem;
+      left: 0.6rem;
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      color: #fff;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(6px);
+      padding: 0.2rem 0.55rem;
+      border-radius: 20px;
+      letter-spacing: 0.04em;
+    }
+    /* 播放按钮 */
+    .vid-play {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.92);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+      opacity: 0;
+      transition: opacity 0.25s, transform 0.25s;
+    }
+    .vid-card:hover .vid-play { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    .vid-play::before {
+      content: '';
+      width: 0; height: 0;
+      border-left: 14px solid var(--accent);
+      border-top: 9px solid transparent;
+      border-bottom: 9px solid transparent;
+      margin-left: 4px;
+    }
+
+    /* 卡片正文 */
+    .vid-body {
+      padding: 1.1rem 1.15rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    .vid-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.5;
+      margin-bottom: 0.55rem;
+    }
+    .vid-desc {
+      font-size: 0.86rem;
+      color: var(--muted);
+      line-height: 1.65;
+      margin-bottom: 0.9rem;
+      flex: 1;
+    }
+    .vid-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding-top: 0.7rem;
+      border-top: 1px dashed color-mix(in srgb, var(--rule) 80%, transparent);
+    }
+    .vid-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .vid-tag {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--accent2);
+      background: color-mix(in srgb, var(--accent2) 10%, transparent);
+      padding: 0.15rem 0.5rem;
+      border-radius: 6px;
+    }
+    .vid-link {
+      font-size: 0.8rem;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: gap 0.2s;
+    }
+    .vid-link:hover { text-decoration: underline; }
+
+    /* CTA */
+    .cta {
+      text-align: center;
+      padding: 4rem 1.5rem !important;
+      background: radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 70%);
+    }
+    .cta h2 { justify-content: center; }
+    .cta-btn {
+      display: inline-block;
+      padding: 1rem 2.6rem;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.15rem;
+      text-decoration: none;
+      transition: all 0.2s;
+      box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 30%, transparent);
+    }
+    .cta-btn:hover {
+      background: color-mix(in srgb, var(--accent) 85%, #000);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+    .cta-sub { margin-top: 1rem; color: var(--muted); font-size: 0.95rem; }
+
+    footer .copyright { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
+
+    .fade-up { opacity: 0; animation: fadeUp 0.6s ease-out forwards; }
+    .d1 { animation-delay: 0.05s; }
+    .d2 { animation-delay: 0.12s; }
+
+    .back-to-top{position:fixed;bottom:2rem;right:2rem;width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s,transform 0.3s;z-index:90;box-shadow:var(--shadow)}
+    .back-to-top.show{opacity:1;pointer-events:auto}
+    .back-to-top:hover{transform:translateY(-3px)}
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">超哥<span class="accent">超车</span></a>
+      <div class="nav-right">
+        <div class="nav-links">
+          <a href="index.html">首页</a>
+          <a href="models.html">模型</a>
+          <a href="guide.html">流程</a>
+          <a href="calculator.html">算账器</a>
+          <a href="loan.html">贷款</a>
+          <a href="database.html">车型库</a>
+          <a href="compare.html">对比</a>
+          <a href="ev-vs-gas.html">油电对比</a>
+          <a href="quotes.html">金句</a>
+          <a href="cases.html">案例</a>
+          <a href="stories.html">故事</a>
+          <a href="checklist.html">清单</a>
+          <a href="pitfalls.html">避坑</a>
+          <a href="faq.html">FAQ</a>
+          <a href="videos.html" class="active">视频</a>
+          <a href="recommend.html">推荐</a>
+          <a href="quiz.html">测试</a>
+          <a href="chat.html">在线</a>
+          <a href="board.html">留言</a>
+          <a href="about.html">画像</a>
+        </div>
+        <button class="nav-search-btn" onclick="openSearch()" title="搜索">🔍</button>
+        <div class="theme-switch">
+          <button class="theme-btn" onclick="toggleThemeMenu()" title="切换主题">🎨</button>
+          <div class="theme-menu" id="themeMenu">
+            <button class="theme-option" data-theme="dark" onclick="setTheme('dark')"><span class="theme-swatch" style="background:#0f1115;border-color:#ff6b35"></span>暗夜橙</button>
+            <button class="theme-option" data-theme="light" onclick="setTheme('light')"><span class="theme-swatch" style="background:#f8f9fa;border-color:#ff6b35"></span>极简白</button>
+            <button class="theme-option" data-theme="forest" onclick="setTheme('forest')"><span class="theme-swatch" style="background:#0a1f1c;border-color:#52d4a8"></span>墨绿森林</button>
+            <button class="theme-option" data-theme="cyber" onclick="setTheme('cyber')"><span class="theme-swatch" style="background:#0d0b1a;border-color:#c026d3"></span>暗紫赛博</button>
+            <button class="theme-option" data-theme="paper" onclick="setTheme('paper')"><span class="theme-swatch" style="background:#1a1612;border-color:#e8a87c"></span>暖纸棕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <article class="page">
+    <section class="page-hero" style="text-align:center;padding:4rem 0 2.5rem;">
+      <div class="page-hero-inner">
+        <span class="label-tag fade-up">内容库</span>
+        <h1 class="fade-up d1" style="font-size:clamp(2rem,6vw,3rem);font-weight:700;margin-bottom:0.8rem;">视频<span class="gradient-text">精选</span></h1>
+        <p class="fade-up d2" style="color:var(--muted);max-width:580px;margin:0 auto;line-height:1.7;">超哥抖音409万粉丝，句句大实话。精选14条最扎心的视频，劝退、算账、选车、看市场，一篇看懂。</p>
+      </div>
+    </section>
+
+    <!-- 主题1：劝退合集 -->
+    <section style="padding-top:2rem;">
+      <div class="vid-topic">
+        <div class="topic-head">
+          <span class="topic-num">01</span>
+          <h2 class="topic-title">劝退合集</h2>
+          <span class="topic-rule"></span>
+          <span class="topic-count">4 条</span>
+        </div>
+        <div class="vid-grid">
+
+          <div class="vid-card">
+            <div class="vid-thumb" style="background:linear-gradient(135deg,#ff6b35 0%,#c026d3 100%);">
+              <span class="corner">劝退</span>
+              <span class="emoji">🚫</span>
+              <a class="vid-play" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener" title="播放视频"></a>
+            </div>
+            <div class="vid-body">
+              <div class="vid-title">月薪5000想买30万的车？劝你买个der</div>
+              <p class="vid-desc">月入5000硬上30万的车，月供6000，养车1500，饭都吃不起。超哥给你算笔狠账，劝你趁早打消这念头。</p>
+              <div class="vid-foot">
+                <div class="vid-tags"><span class="vid-tag">#劝退</span><span class="vid-tag">#算账</span><span class="vid-tag">#贷款</span></div>
+                <a class="vid-link" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener">播放 →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="vid-card">
+            <div class="vid-thumb" style="background:linear-gradient(135deg,#ff6b35 0%,#f7c948 100%);">
+              <span class="corner">劝退</span>
+              <span class="emoji">⛔</span>
+              <a class="vid-play" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener" title="播放视频"></a>
+            </div>
+            <div class="vid-body">
+              <div class="vid-title">别买！这三类人根本不该买车</div>
+              <p class="vid-desc">没车位的人、收入不稳定的人、一年开不到5000公里的人——这三类买车就是给自己找罪受。对号入座看看是不是你。</p>
+              <div class="vid-foot">
+                <div class="vid-tags"><span class="vid-tag">#劝退</span><span class="vid-tag">#避坑</span></div>
+                <a class="vid-link" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener">播放 →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="vid-card">
+            <div class="vid-thumb" style="background:linear-gradient(135deg,#c026d3 0%,#06b6d4 100%);">
+              <span class="corner">劝退</span>
+              <span class="emoji">🏦</span>
+              <a class="vid-play" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener" title="播放视频"></a>
+            </div>
+            <div class="vid-body">
+              <div class="vid-title">贷款买豪车=给银行打工？算给你看</div>
+              <p class="vid-desc">贷30万买5年，利息加起来能买辆飞度。0首付0利息的套路全拆解，看完你就明白谁在赚你的钱。</p>
+              <div class="vid-foot">
+                <div class="vid-tags"><span class="vid-tag">#劝退</span><span class="vid-tag">#贷款</span><span class="vid-tag">#算账</span></div>
+                <a class="vid-link" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener">播放 →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="vid-card">
+            <div class="vid-thumb" style="background:linear-gradient(135deg,#ff6b35 0%,#4ecdc4 100%);">
+              <span class="corner">劝退</span>
+              <span class="emoji">🧊</span>
+              <a class="vid-play" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener" title="播放视频"></a>
+            </div>
+            <div class="vid-body">
+              <div class="vid-title">月薪8000贷款买25万凯美瑞？我来泼冷水</div>
+              <p class="vid-desc">月入8000供25万的车，看似月供能扛，实际一算总账五年亏一辆车钱。这冷水泼得你心服口服。</p>
+              <div class="vid-foot">
+                <div class="vid-tags"><span class="vid-tag">#劝退</span><span class="vid-tag">#算账</span></div>
+                <a class="vid-link" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener">播放 →</a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 主题2：算账合集 -->
+    <section>
+      <div class="vid-topic">
+        <div class="topic-head">
+          <span class="topic-num">02</span>
+          <h2 class="topic-title">算账合集</h2>
+          <span class="topic-rule"></span>
+          <span class="topic-count">4 条</span>
+        </div>
+        <div class="vid-grid">
+
+          <div class="vid-card">
+            <div class="vid-thumb" style="background:linear-gradient(135deg,#4ecdc4 0%,#06b6d4 100%);">
+              <span class="corner">算账</span>
+              <span class="emoji">🧮</span>
+              <a class="vid-play" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener" title="播放视频"></a>
+            </div>
+            <div class="vid-body">
+              <div class="vid-title">10万和15万的车，10年后差多少钱？算完我笑了</div>
+              <p class="vid-desc">同样开10年，10万的车总花21万，15万的车总花32万，差了11万。这笔账算完，你就知道该买哪个。</p>
+              <div class="vid-foot">
+                <div class="vid-tags"><span class="vid-tag">#算账</span><span class="vid-tag">#总成本</span></div>
+                <a class="vid-link" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener">播放 →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="vid-card">
+            <div class="vid-thumb" style="background:linear-gradient(135deg,#f7c948 0%,#ff6b35 100%);">
+              <span class="corner">算账</span>
+              <span class="emoji">💸</span>
+              <a class="vid-play" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener" title="播放视频"></a>
+            </div>
+            <div class="vid-body">
+              <div class="vid-title">养一辆车一年要烧多少钱？这笔账你必须知道</div>
+              <p class="vid-desc">保险、保养、油钱、停车、折旧……一年养车的隐性成本，比你工资条上的扣款还吓人。</p>
+              <div class="vid-foot">
+                <div class="vid-tags"><span class="vid-tag">#算账</span><span class="vid-tag">#养车成本</span></div>
+                <a class="vid-link" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener">播放 →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="vid-card">
+            <div class="vid-thumb" style="background:linear-gradient(135deg,#06b6d4 0%,#c026d3 100%);">
+              <span class="corner">算账</span>
+              <span class="emoji">📄</span>
+              <a class="vid-play" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener" title="播放视频"></a>
+            </div>
+            <div class="vid-body">
+              <div class="vid-title">新能源车险比油车贵多少？真相来了</div>
+              <p class="vid-desc">同样20万的车，电车保险比油车贵20%-40%，还可能拒保。实测对比，把电车省油钱又亏回去了。</p>
+              <div class="vid-foot">
+                <div class="vid-tags"><span class="vid-tag">#算账</span><span class="vid-tag">#保险</span><span class="vid-tag">#油电</span></div>
+                <a class="vid-link" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener">播放 →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="vid-card">
+            <div class="vid-thumb" style="background:linear-gradient(135deg,#4ecdc4 0%,#f7c948 100%);">
+              <span class="corner">算账</span>
+              <span class="emoji">🔍</span>
+              <a class="vid-play" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener" title="播放视频"></a>
+            </div>
+            <div class="vid-body">
+              <div class="vid-title">买车隐性成本盘点：落地价只是个零头</div>
+              <p class="vid-desc">购置税、保险、装饰、上牌、延保……落地价之外的5笔钱，销售一个都不会主动告诉你。</p>
+              <div class="vid-foot">
+                <div class="vid-tags"><span class="vid-tag">#算账</span><span class="vid-tag">#避坑</span></div>
+                <a class="vid-link" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener">播放 →</a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 主题3：选车合集 -->
+    <section>
+      <div class="vid-topic">
+        <div class="topic-head">
+          <span class="topic-num">03</span>
+          <h2 class="topic-title">选车合集</h2>
+          <span class="topic-rule"></span>
+          <span class="topic-count">3 条</span>
+        </div>
+        <div class="vid-grid">
+
+          <div class="vid-card">
+            <div class="vid-thumb" style="background:linear-gradient(135deg,#52d4a8 0%,#06b6d4 100%);">
+              <span class="corner">选车</span>
+              <span class="emoji">🚙</span>
+              <a class="vid-play" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener" title="播放视频"></a>
+            </div>
+            <div class="vid-body">
+              <div class="vid-title">理想L7 vs 汉兰达，家用SUV怎么选？</div>
+              <p class="vid-desc">一个增程一个油，一个智能一个稳。30万家用SUV，从空间、油耗、保值、省心四个维度掰开揉碎比。</p>
+              <div class="vid-foot">
+                <div class="vid-tags"><span class="vid-tag">#选车</span><span class="vid-tag">#SUV</span><span class="vid-tag">#对比</span></div>
+                <a class="vid-link" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener">播放 →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="vid-card">
+            <div class="vid-thumb" style="background:linear-gradient(135deg,#f7c948 0%,#52d4a8 100%);">
+              <span class="corner">选车</span>
+              <span class="emoji">🚗</span>
+              <a class="vid-play" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener" title="播放视频"></a>
+            </div>
+            <div class="vid-body">
+              <div class="vid-title">10万家用车怎么选？这三款我推荐</div>
+              <p class="vid-desc">10万预算家用代步，朗逸、轩逸、比亚迪秦PLUS，谁更值？不堆参数，只说老百姓关心的实在事。</p>
+              <div class="vid-foot">
+                <div class="vid-tags"><span class="vid-tag">#选车</span><span class="vid-tag">#推荐</span><span class="vid-tag">#家用</span></div>
+                <a class="vid-link" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener">播放 →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="vid-card">
+            <div class="vid-thumb" style="background:linear-gradient(135deg,#ff6b35 0%,#52d4a8 100%);">
+              <span class="corner">选车</span>
+              <span class="emoji">⚡</span>
+              <a class="vid-play" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener" title="播放视频"></a>
+            </div>
+            <div class="vid-body">
+              <div class="vid-title">第一台车买油车还是电车？一分钟讲透</div>
+              <p class="vid-desc">有没有家充、跑不跑长途、开几年——三个问题问完自己，答案就出来了。别再纠结了。</p>
+              <div class="vid-foot">
+                <div class="vid-tags"><span class="vid-tag">#选车</span><span class="vid-tag">#油电</span></div>
+                <a class="vid-link" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener">播放 →</a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 主题4：市场分析 -->
+    <section>
+      <div class="vid-topic">
+        <div class="topic-head">
+          <span class="topic-num">04</span>
+          <h2 class="topic-title">市场分析</h2>
+          <span class="topic-rule"></span>
+          <span class="topic-count">3 条</span>
+        </div>
+        <div class="vid-grid">
+
+          <div class="vid-card">
+            <div class="vid-thumb" style="background:linear-gradient(135deg,#c026d3 0%,#ff6b35 100%);">
+              <span class="corner">市场</span>
+              <span class="emoji">📈</span>
+              <a class="vid-play" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener" title="播放视频"></a>
+            </div>
+            <div class="vid-body">
+              <div class="vid-title">2026年买车，这5个变化你必须知道</div>
+              <p class="vid-desc">油车降价潮、电池成本腰斩、智驾标配化、车险涨价、补贴退坡——这5件事直接决定你今年该不该掏钱。</p>
+              <div class="vid-foot">
+                <div class="vid-tags"><span class="vid-tag">#市场</span><span class="vid-tag">#2026</span></div>
+                <a class="vid-link" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener">播放 →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="vid-card">
+            <div class="vid-thumb" style="background:linear-gradient(135deg,#06b6d4 0%,#52d4a8 100%);">
+              <span class="corner">市场</span>
+              <span class="emoji">📉</span>
+              <a class="vid-play" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener" title="播放视频"></a>
+            </div>
+            <div class="vid-body">
+              <div class="vid-title">油车降价潮来了，现在抄底还是再等？</div>
+              <p class="vid-desc">BBA优惠10万+，合资车跌穿底价。是真底还是半山腰？超哥给你划一条"该出手"的红线。</p>
+              <div class="vid-foot">
+                <div class="vid-tags"><span class="vid-tag">#市场</span><span class="vid-tag">#油车</span><span class="vid-tag">#时机</span></div>
+                <a class="vid-link" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener">播放 →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="vid-card">
+            <div class="vid-thumb" style="background:linear-gradient(135deg,#f7c948 0%,#c026d3 100%);">
+              <span class="corner">市场</span>
+              <span class="emoji">🏎️</span>
+              <a class="vid-play" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener" title="播放视频"></a>
+            </div>
+            <div class="vid-body">
+              <div class="vid-title">BBA降价了，现在能抄底吗？</div>
+              <p class="vid-desc">3系、C级、A4L现在优惠幅度历史最大。但降价背后是清库存换新款，抄底要看清三个前提。</p>
+              <div class="vid-foot">
+                <div class="vid-tags"><span class="vid-tag">#市场</span><span class="vid-tag">#BBA</span><span class="vid-tag">#时机</span></div>
+                <a class="vid-link" href="https://www.douyin.com/user/MS4wLjABAAAAv8X3J3vGZ3pZ3pZ3pZ" target="_blank" rel="noopener">播放 →</a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <h2>看不过瘾？</h2>
+      <p class="cta-sub" style="margin-bottom:1.6rem;max-width:520px;margin-left:auto;margin-right:auto;">关注抖音 @超哥超车，每天更新买车避坑大实话。看不进去视频的，也可以直接来问。</p>
+      <a class="cta-btn" href="chat.html">跟超哥聊聊</a>
+      <p class="cta-sub">409万粉丝的选择，不坑你</p>
+    </section>
+  </article>
+
+  <div class="share-bar">
+    <span class="share-label">分享：</span>
+    <button class="share-btn" onclick="navigator.clipboard.writeText(window.location.href).then(()=>{this.textContent='已复制!';setTimeout(()=>this.textContent='复制链接',1500)})">复制链接</button>
+    <button class="share-btn" onclick="window.open('https://service.weibo.com/share/share.php?url='+encodeURIComponent(window.location.href)+'&title='+encodeURIComponent(document.title))">微博</button>
+  </div>
+
+    <footer>
+    <p class="trust">买车是为生活服务，不是拖累生活。</p>
+    <p class="copyright">© 2026 超哥超车 · 劝退式买车思维视角 · 抖音 @超哥超车 cgcc666</p>
+  </footer>
+
+  <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部">↑</button>
+
+  <script>
+  function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('chaoge-theme',t)}catch(e){}document.querySelectorAll('.theme-option').forEach(o=>o.classList.toggle('active',o.dataset.theme===t))}
+  function toggleThemeMenu(){document.getElementById('themeMenu').classList.toggle('open')}
+  document.addEventListener('click',e=>{if(!e.target.closest('.theme-switch'))document.getElementById('themeMenu')?.classList.remove('open')});
+  (function(){try{const t=localStorage.getItem('chaoge-theme')||'dark';setTheme(t)}catch(e){setTheme('dark')}})();
+  window.addEventListener('scroll',function(){var n=document.querySelector('.nav');if(n)n.classList.toggle('scrolled',window.scrollY>10)},{passive:true});
+  var btt=document.getElementById('backToTop');if(btt){window.addEventListener('scroll',function(){btt.classList.toggle('show',window.scrollY>400)},{passive:true})}
+  </script>
+<div class="search-overlay" id="searchOverlay" onclick="if(event.target===this)closeSearch()">
+    <div class="search-box">
+      <input type="text" class="search-input" id="searchInput" placeholder="搜索页面内容..." oninput="doSearch(this.value)">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+  </div>
+
+  <script>
+var SEARCH_DATA=[{title:'首页',url:'index.html',kw:'首页 超哥 超车 思维 心智模型 认知 概览'},{title:'八大心智模型',url:'models.html',kw:'模型 经济账本 劝退 需求锚点 时机 短板 面子 马力过剩 油电分层'},{title:'购车流程图',url:'guide.html',kw:'流程 指南 预算 选车 看车 试驾 谈价 合同 验车 提车'},{title:'购车算账器',url:'calculator.html',kw:'算账 计算 折旧 保险 保养 油费 总成本'},{title:'贷款计算器',url:'loan.html',kw:'贷款 月供 利息 首付 计算 金融'},{title:'车型库',url:'database.html',kw:'车型 数据库 筛选 推荐 卡罗拉 思域 凯美瑞 雅阁'},{title:'车型对比',url:'compare.html',kw:'对比 比较 车型 参数 优缺点'},{title:'油电对比',url:'ev-vs-gas.html',kw:'油车 电车 新能源 对比 油费 电费 保值率'},{title:'超哥金句',url:'quotes.html',kw:'金句 名言 买个der 急于掏钱 现金流'},{title:'实战案例',url:'cases.html',kw:'案例 实战 选车 真实 场景'},{title:'投稿故事',url:'stories.html',kw:'故事 投稿 车友 分享 经历'},{title:'购车清单',url:'checklist.html',kw:'清单 检查 提车 验车 注意事项'},{title:'避坑指南',url:'pitfalls.html',kw:'避坑 坑 陷阱 骗局 注意'},{title:'FAQ精选',url:'faq.html',kw:'faq 问答 常见问题 预算 时机 油电 品牌 二手'},{title:'视频精选',url:'videos.html',kw:'视频 劝退 算账 选车 市场分析'},{title:'超哥推荐',url:'recommend.html',kw:'推荐 车型 值得买 性价比'},{title:'购车性格测试',url:'quiz.html',kw:'测试 性格 趣味 理性 面子 冲动'},{title:'超哥在线',url:'chat.html',kw:'在线 聊天 对话 AI 问答'},{title:'留言板',url:'board.html',kw:'留言 评论 车友 讨论'},{title:'超哥画像',url:'about.html',kw:'画像 人物 抖音 博主 超哥超车'}];
+function openSearch(){document.getElementById('searchOverlay').classList.add('open');document.getElementById('searchInput').focus()}
+function closeSearch(){document.getElementById('searchOverlay').classList.remove('open')}
+function doSearch(q){var r=document.getElementById('searchResults');if(!q.trim()){r.innerHTML='';return}var m=SEARCH_DATA.filter(function(d){return(d.title+d.kw).toLowerCase().indexOf(q.toLowerCase())>=0});if(m.length===0){r.innerHTML='<div class="search-no-result">没有找到相关页面</div>';return}r.innerHTML=m.map(function(d){return'<a class="search-result-item" href="'+d.url+'"><div class="sr-title">'+d.title+'</div><div class="sr-kw">'+d.kw+'</div></a>'}).join('')}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSearch()});
+var btt=document.getElementById('backToTop');if(btt){window.addEventListener('scroll',function(){btt.classList.toggle('show',window.scrollY>400)},{passive:true})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
+</script>
+
+</body>
+</html>
