@@ -61,64 +61,68 @@ body::before {
 body > * { position:relative; z-index:2; }
 
 /* ===== 导航栏 ===== */
-.nav { position:sticky; top:0; z-index:100; background:var(--nav-bg); backdrop-filter:saturate(180%) blur(12px); border-bottom:1px solid transparent; transition:background 0.4s ease, border-color 0.3s ease, box-shadow 0.3s ease; }
+.nav { position:sticky; top:0; z-index:100; background:var(--nav-bg); backdrop-filter:saturate(1.8) blur(20px); border-bottom:1px solid transparent; transition:background 0.4s ease, border-color 0.3s ease, box-shadow 0.3s ease; }
 .nav.scrolled { border-bottom-color:var(--rule); box-shadow:0 1px 12px rgba(0,0,0,0.08); }
-.nav-inner { max-width:var(--max); margin:0 auto; padding:0.7rem 1.5rem; display:flex; align-items:center; gap:1.2rem; }
-.nav-brand { font-size:1.15rem; font-weight:700; color:var(--ink); text-decoration:none; white-space:nowrap; flex-shrink:0; }
+.nav-inner { max-width:var(--max); margin:0 auto; padding:0 1.5rem; height:56px; display:flex; align-items:center; gap:1.8rem; }
+.nav-brand { font-size:1.1rem; font-weight:700; color:var(--ink); text-decoration:none; white-space:nowrap; flex-shrink:0; letter-spacing:0.02em; }
 .nav-brand .accent { color:var(--accent); }
-.nav-right { display:flex; align-items:center; gap:0.4rem; flex:1; min-width:0; }
-.nav-links { display:flex; gap:0; align-items:center; flex:1; justify-content:space-between; }
-.theme-switch { flex-shrink:0; }
+.nav-right { display:flex; align-items:center; gap:0.3rem; flex:1; min-width:0; }
+.nav-links { display:flex; gap:0.1rem; align-items:center; }
+.theme-switch { margin-left:auto; flex-shrink:0; }
 
 /* 分组下拉菜单 */
 .nav-group { position:relative; flex-shrink:0; }
 .nav-group-btn {
   color:var(--muted); background:transparent; border:none; cursor:pointer;
-  font-size:0.92rem; font-family:var(--font); padding:0.55rem 0.85rem; border-radius:8px;
-  display:flex; align-items:center; gap:0.25rem; transition:color 0.2s, background 0.2s; white-space:nowrap;
-  min-height:40px; box-sizing:border-box;
+  font-size:0.88rem; font-family:var(--font); font-weight:500;
+  padding:0.5rem 0.75rem; border-radius:8px;
+  display:flex; align-items:center; gap:0.25rem;
+  transition:color 0.15s ease, background 0.15s ease; white-space:nowrap;
+  min-height:40px; box-sizing:border-box; letter-spacing:0.01em;
 }
 .nav-group-btn:hover, .nav-group.open .nav-group-btn { color:var(--ink); background:var(--hover-bg); }
-.nav-group-btn .caret { font-size:0.65rem; opacity:0.6; transition:transform 0.2s; }
+.nav-group-btn .caret { font-size:0.6rem; opacity:0.5; transition:transform 0.2s ease; }
 .nav-group.open .nav-group-btn .caret { transform:rotate(180deg); }
 
 .nav-dropdown {
-  position:absolute; top:100%; left:50%; transform:translateX(-50%);
+  position:absolute; top:calc(100% + 2px); left:50%; transform:translateX(-50%) translateY(6px);
   background:var(--bg2); border:1px solid var(--rule); border-radius:12px;
-  padding:0.5rem; min-width:170px; display:none; z-index:200;
-  box-shadow:var(--shadow); opacity:0; transition:opacity 0.15s ease;
-  margin-top:4px;
+  padding:0.4rem; min-width:168px; display:none; z-index:200;
+  box-shadow:0 8px 28px rgba(0,0,0,0.2); opacity:0;
+  transition:opacity 0.18s ease, transform 0.18s ease; pointer-events:none;
 }
-/* 透明桥接区：消除按钮和下拉之间的间隙，防止hover断开 */
-.nav-dropdown::before {
-  content:''; position:absolute; top:-8px; left:0; right:0; height:8px;
+.nav-dropdown::before { content:''; position:absolute; top:-6px; left:0; right:0; height:6px; }
+.nav-group:hover .nav-dropdown, .nav-group.open .nav-dropdown {
+  display:flex; flex-direction:column; gap:0.05rem;
+  opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto;
 }
-.nav-group:hover .nav-dropdown, .nav-group.open .nav-dropdown { display:flex; flex-direction:column; gap:0.15rem; opacity:1; }
 .nav-dropdown a {
-  color:var(--muted); text-decoration:none; font-size:0.9rem;
-  padding:0.55rem 0.85rem; border-radius:8px; transition:color 0.15s, background 0.15s; white-space:nowrap;
-  min-height:40px; display:flex; align-items:center;
+  color:var(--muted); text-decoration:none; font-size:0.86rem; font-weight:500;
+  padding:0.5rem 0.8rem; border-radius:8px;
+  transition:color 0.12s ease, background 0.12s ease; white-space:nowrap;
+  min-height:38px; display:flex; align-items:center;
 }
 .nav-dropdown a:hover { color:var(--ink); background:var(--hover-bg); }
-.nav-dropdown a.active { color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, transparent); font-weight:600; }
+.nav-dropdown a.active { color:var(--accent); background:color-mix(in srgb, var(--accent) 10%, transparent); font-weight:600; }
 
 /* 非分组的独立链接 */
 .nav-links > a {
-  color:var(--muted); text-decoration:none; font-size:0.92rem;
-  padding:0.55rem 0.85rem; border-radius:8px; transition:color 0.2s, background 0.2s; white-space:nowrap; flex-shrink:0;
-  min-height:40px; display:flex; align-items:center;
+  color:var(--muted); text-decoration:none; font-size:0.88rem; font-weight:500;
+  padding:0.5rem 0.75rem; border-radius:8px;
+  transition:color 0.15s ease, background 0.15s ease; white-space:nowrap; flex-shrink:0;
+  min-height:40px; display:flex; align-items:center; letter-spacing:0.01em;
 }
 .nav-links > a:hover { color:var(--ink); background:var(--hover-bg); }
-.nav-links > a.active { color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, transparent); font-weight:600; }
+.nav-links > a.active { color:var(--accent); background:color-mix(in srgb, var(--accent) 10%, transparent); font-weight:600; }
 
-@media(max-width:600px){
-  .nav-inner { padding:0.55rem 0.8rem; gap:0.6rem; }
-  .nav-links { gap:0.1rem; }
-  .nav-links > a, .nav-group-btn { font-size:0.82rem; padding:0.45rem 0.6rem; min-height:38px; }
-  .nav-brand { font-size:1rem; }
-  .nav-inner { padding:0.55rem 1rem; gap:0.3rem; }
-  .nav-dropdown { left:0; transform:none; min-width:150px; }
-  .nav-dropdown a { font-size:0.85rem; }
+@media(max-width:768px){
+  .nav-inner { height:48px; padding:0 0.8rem; gap:0.8rem; }
+  .nav-links { gap:0.05rem; }
+  .nav-links > a, .nav-group-btn { font-size:0.78rem; padding:0.4rem 0.5rem; min-height:36px; }
+  .nav-brand { font-size:0.95rem; }
+  .nav-dropdown { left:0; transform:translateY(6px); min-width:148px; }
+  .nav-group:hover .nav-dropdown, .nav-group.open .nav-dropdown { transform:translateY(0); }
+  .nav-dropdown a { font-size:0.8rem; padding:0.45rem 0.7rem; min-height:36px; }
 }
 
 /* ===== 主题切换器 ===== */
