@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>购车性格测试 · 超哥超车</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    /* ===== 返回顶部按钮 ===== */
+    .back-to-top{position:fixed;bottom:2rem;right:2rem;width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s,transform 0.3s;z-index:90;box-shadow:var(--shadow)}
+    .back-to-top.show{opacity:1;pointer-events:auto}
+    .back-to-top:hover{transform:translateY(-3px)}
+
+    /* ===== 测试容器 ===== */
+    .quiz-wrap{max-width:720px;margin:0 auto;padding:1rem 1.5rem 4rem}
+
+    /* ===== 开始卡片 ===== */
+    .start-card{background:var(--bg2);border:1px solid var(--rule);border-radius:var(--radius);padding:2.8rem 2rem;text-align:center;position:relative;overflow:hidden}
+    .start-card::before{content:'';position:absolute;top:-40%;left:50%;transform:translateX(-50%);width:90%;height:120%;background:radial-gradient(ellipse at center,color-mix(in srgb,var(--accent) 14%,transparent) 0%,transparent 60%);pointer-events:none}
+    .start-emoji{font-size:3.2rem;margin-bottom:0.6rem;line-height:1;position:relative}
+    .start-card h2{justify-content:center;font-size:1.5rem;margin-bottom:0.8rem;position:relative}
+    .start-desc{color:var(--muted);line-height:1.75;margin-bottom:1.6rem;max-width:480px;margin-left:auto;margin-right:auto;position:relative}
+    .start-features{display:flex;justify-content:center;gap:1.2rem;flex-wrap:wrap;margin-bottom:1.8rem;position:relative}
+    .start-feature{font-size:0.82rem;color:var(--muted);display:flex;align-items:center;gap:0.35rem}
+    .start-feature .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+    .start-btn{position:relative}
+
+    /* ===== 进度条 ===== */
+    .progress-section{margin-bottom:1.8rem}
+    .progress-info{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;font-family:var(--font-mono);font-size:0.8rem;color:var(--muted)}
+    .progress-info .progress-current{color:var(--accent);font-weight:700}
+    .progress-track{height:8px;background:var(--bg3);border-radius:20px;overflow:hidden}
+    .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:20px;transition:width 0.5s cubic-bezier(.4,0,.2,1);width:0%}
+
+    /* ===== 题目卡片 ===== */
+    .question-card{background:var(--bg2);border:1px solid var(--rule);border-radius:var(--radius);padding:2rem;transition:opacity 0.35s ease,transform 0.35s ease;position:relative;overflow:hidden}
+    .question-card.fade-out{opacity:0;transform:translateX(-24px);pointer-events:none}
+    .question-num{font-family:var(--font-mono);font-size:0.74rem;color:var(--accent);letter-spacing:0.08em;margin-bottom:0.9rem;display:inline-block;padding:0.22rem 0.65rem;border-radius:6px;background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+    .question-text{font-size:clamp(1.15rem,3vw,1.45rem);font-weight:700;line-height:1.5;margin-bottom:1.8rem;color:var(--ink);letter-spacing:-0.01em}
+    .options{display:flex;flex-direction:column;gap:0.75rem}
+    .option-btn{display:flex;align-items:center;gap:0.9rem;width:100%;text-align:left;background:var(--bg);border:1px solid var(--rule);border-radius:10px;padding:0.95rem 1.1rem;color:var(--ink);font-family:var(--font);font-size:0.98rem;cursor:pointer;transition:all 0.2s cubic-bezier(.4,0,.2,1)}
+    .option-btn:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--bg));transform:translateX(4px)}
+    .option-btn .option-label{width:32px;height:32px;border-radius:8px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:0.85rem;color:var(--accent);flex-shrink:0;transition:all 0.2s}
+    .option-btn:hover .option-label{background:var(--accent);color:#fff}
+    .option-btn.selected{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,var(--bg))}
+    .option-btn.selected .option-label{background:var(--accent);color:#fff;transform:scale(1.08)}
+    .option-btn .option-text{flex:1;line-height:1.5}
+    .option-btn.disabled{pointer-events:none;opacity:0.55}
+    .option-btn.selected.disabled{opacity:1}
+
+    /* ===== 结果卡片 ===== */
+    .result-card{background:var(--bg2);border:1px solid var(--rule);border-radius:var(--radius);padding:2.6rem 2rem;text-align:center;display:none;position:relative;overflow:hidden}
+    .result-card.show{display:block;animation:fadeUp 0.5s ease-out}
+    .result-card::before{content:'';position:absolute;top:-50%;left:50%;transform:translateX(-50%);width:100%;height:120%;background:radial-gradient(ellipse at center,color-mix(in srgb,var(--result-color,var(--accent)) 16%,transparent) 0%,transparent 60%);pointer-events:none}
+    .result-inner{position:relative;z-index:1}
+    .result-emoji{font-size:3.6rem;margin-bottom:0.4rem;line-height:1}
+    .result-type-label{font-family:var(--font-mono);font-size:0.72rem;color:var(--result-color,var(--accent));letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem;font-weight:700}
+    .result-title{font-size:clamp(1.6rem,4vw,2.2rem);font-weight:700;margin-bottom:1rem;line-height:1.2;color:var(--ink)}
+    .result-desc{font-size:1.05rem;line-height:1.8;color:var(--ink);max-width:520px;margin:0 auto 1.5rem}
+    .result-advice{background:color-mix(in srgb,var(--accent3) 10%,transparent);border-left:3px solid var(--accent3);border-radius:8px;padding:1rem 1.2rem;text-align:left;font-size:0.95rem;line-height:1.75;color:var(--ink);max-width:520px;margin:0 auto 1.6rem}
+    .result-advice .advice-label{font-family:var(--font-mono);font-size:0.7rem;color:var(--accent3);letter-spacing:0.05em;text-transform:uppercase;font-weight:700;display:block;margin-bottom:0.4rem}
+    .result-stats{display:flex;justify-content:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.8rem}
+    .stat-pill{font-family:var(--font-mono);font-size:0.75rem;padding:0.3rem 0.75rem;border-radius:20px;border:1px solid var(--rule);color:var(--muted)}
+    .stat-pill.lead{color:var(--accent);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent);font-weight:700}
+    .result-actions{display:flex;gap:0.8rem;justify-content:center;flex-wrap:wrap}
+    .share-tip{margin-top:1.4rem;font-size:0.85rem;color:var(--muted);font-style:italic}
+
+    @media(max-width:600px){
+      .quiz-wrap{padding:0.5rem 1rem 3rem}
+      .start-card{padding:2rem 1.3rem}
+      .question-card{padding:1.4rem}
+      .option-btn{padding:0.85rem 0.95rem;font-size:0.92rem;gap:0.7rem}
+      .option-btn .option-label{width:28px;height:28px;font-size:0.78rem}
+      .result-card{padding:2rem 1.3rem}
+      .start-features{gap:0.8rem}
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">超哥<span class="accent">超车</span></a>
+      <div class="nav-right">
+        <div class="nav-links">
+          <a href="index.html">首页</a>
+          <a href="models.html">模型</a>
+          <a href="guide.html">流程</a>
+          <a href="calculator.html">算账器</a>
+          <a href="loan.html">贷款</a>
+          <a href="database.html">车型库</a>
+          <a href="compare.html">对比</a>
+          <a href="ev-vs-gas.html">油电对比</a>
+          <a href="quotes.html">金句</a>
+          <a href="cases.html">案例</a>
+          <a href="stories.html">故事</a>
+          <a href="checklist.html">清单</a>
+          <a href="pitfalls.html">避坑</a>
+          <a href="faq.html">FAQ</a>
+          <a href="videos.html">视频</a>
+          <a href="recommend.html">推荐</a>
+          <a href="quiz.html" class="active">测试</a>
+          <a href="chat.html">在线</a>
+          <a href="board.html">留言</a>
+          <a href="about.html">画像</a>
+        </div>
+        <button class="nav-search-btn" onclick="openSearch()" title="搜索">🔍</button>
+        <div class="theme-switch">
+          <button class="theme-btn" onclick="toggleThemeMenu()" title="切换主题">🎨</button>
+          <div class="theme-menu" id="themeMenu">
+            <button class="theme-option" data-theme="dark" onclick="setTheme('dark')"><span class="theme-swatch" style="background:#0f1115;border-color:#ff6b35"></span>暗夜橙</button>
+            <button class="theme-option" data-theme="light" onclick="setTheme('light')"><span class="theme-swatch" style="background:#f8f9fa;border-color:#ff6b35"></span>极简白</button>
+            <button class="theme-option" data-theme="forest" onclick="setTheme('forest')"><span class="theme-swatch" style="background:#0a1f1c;border-color:#52d4a8"></span>墨绿森林</button>
+            <button class="theme-option" data-theme="cyber" onclick="setTheme('cyber')"><span class="theme-swatch" style="background:#0d0b1a;border-color:#c026d3"></span>暗紫赛博</button>
+            <button class="theme-option" data-theme="paper" onclick="setTheme('paper')"><span class="theme-swatch" style="background:#1a1612;border-color:#e8a87c"></span>暖纸棕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <article class="page">
+    <section class="page-hero" style="border-bottom:1px solid var(--rule);text-align:center;padding:4rem 0 2.5rem;">
+      <span class="label-tag">趣味测试</span>
+      <h1 style="font-size:clamp(2rem,6vw,3rem);font-weight:700;margin-bottom:0.8rem;letter-spacing:-0.02em;">购车<span class="gradient-text">性格测试</span></h1>
+      <p style="color:var(--muted);max-width:580px;margin:0 auto;line-height:1.7;">8 道题测出你的买车性格，看看你是超哥的知音，还是最该被劝退的那个人。</p>
+    </section>
+
+    <div class="quiz-wrap">
+
+      <!-- 开始卡片 -->
+      <div class="start-card" id="startCard">
+        <div class="start-emoji">🧠</div>
+        <h2>买车之前，先认清自己</h2>
+        <p class="start-desc">很多人买车亏，不是车不好，是没搞清楚自己到底要什么。花两分钟做完这 8 道题，超哥帮你把脉。</p>
+        <div class="start-features">
+          <span class="start-feature"><span class="dot"></span>8 道情景题</span>
+          <span class="start-feature"><span class="dot"></span>4 种性格类型</span>
+          <span class="start-feature"><span class="dot"></span>2 分钟出结果</span>
+        </div>
+        <button class="btn btn-primary start-btn" onclick="startQuiz()">开始测试 →</button>
+      </div>
+
+      <!-- 测试区 -->
+      <div id="quizArea" style="display:none">
+        <div class="progress-section">
+          <div class="progress-info">
+            <span>测试进度</span>
+            <span>第 <span class="progress-current" id="progressNum">1</span> / 8 题</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+        </div>
+        <div class="question-card" id="questionCard"></div>
+      </div>
+
+      <!-- 结果区 -->
+      <div class="result-card" id="resultCard">
+        <div class="result-inner" id="resultInner"></div>
+      </div>
+
+    </div>
+  <div class="share-bar">
+    <span class="share-label">分享：</span>
+    <button class="share-btn" onclick="navigator.clipboard.writeText(window.location.href).then(()=>{this.textContent='已复制!';setTimeout(()=>this.textContent='复制链接',1500)})">复制链接</button>
+    <button class="share-btn" onclick="window.open('https://service.weibo.com/share/share.php?url='+encodeURIComponent(window.location.href)+'&title='+encodeURIComponent(document.title))">微博</button>
+  </div>
+
+  </article>
+
+  <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部">↑</button>
+
+  <script>
+  /* ===== 主题切换 ===== */
+  function setTheme(t){
+    document.documentElement.setAttribute('data-theme',t);
+    try{localStorage.setItem('chaoge-theme',t)}catch(e){}
+    document.querySelectorAll('.theme-option').forEach(function(o){o.classList.toggle('active',o.dataset.theme===t)});
+    var m=document.getElementById('themeMenu');if(m)m.classList.remove('open');
+  }
+  function toggleThemeMenu(){document.getElementById('themeMenu').classList.toggle('open')}
+  document.addEventListener('click',function(e){if(!e.target.closest('.theme-switch')){var m=document.getElementById('themeMenu');if(m)m.classList.remove('open')}});
+  (function(){try{var t=localStorage.getItem('chaoge-theme')||'dark';setTheme(t)}catch(e){setTheme('dark')}})();
+
+  /* ===== 题目数据 ===== */
+  var questions=[
+    {q:"你买车最主要的原因是什么？",opts:["上下班代步","家庭出行需要","觉得有车有面子","被周围人都买车影响了"]},
+    {q:"看到一款心仪的车，你的第一反应是？",opts:["算算10年总花费","看看配置表","想象开出去的样子","查查有没有优惠"]},
+    {q:"月薪1万，你会考虑买什么价位的车？",opts:["5-8万，够用就行","8-12万，性价比","15-20万，咬咬牙","25万+，贷款也行"]},
+    {q:"朋友推荐你买电车，你的反应是？",opts:["先租一周试试","研究续航和充电桩","觉得科技感很酷","担心保值率"]},
+    {q:"两款车价格一样，你怎么选？",opts:["比油耗和保养","比配置和空间","选品牌更大的","看哪个优惠多"]},
+    {q:"你怎么看待贷款买车？",opts:["绝对不贷款，全款","月供不超过收入20%可以","月供30%也能接受","能贷多少贷多少"]},
+    {q:"什么时候买车最合适？",opts:["有真实需求时","年底冲量优惠大时","新款上市旧款降价时","想买就买不等"]},
+    {q:"如果超哥劝你别买，你会？",opts:["认真想想他说得对不对","重新评估需求","觉得他不懂我","换个博主问问"]}
+  ];
+  var labels=["A","B","C","D"];
+
+  /* ===== 结果类型 ===== */
+  var results={
+    A:{emoji:"🧮",label:"理性算账型",title:"你是超哥的知音",desc:"你天生就是超哥的知音。买车先算账，不看面子看钱包。",advice:"保持理性，但别过度分析错过好时机。算总账没错，可有些优惠窗口期很短，看准了就果断出手，等比买划算不等于无脑等。",color:"var(--accent2)"},
+    B:{emoji:"🚗",label:"务实代步型",title:"你清楚自己要什么",desc:"你清楚自己的需求，不会被花里胡哨的配置迷惑。",advice:"第一台车选油车，省心保值。普通家庭买车就是买个腿，别为一年用不上两次的配置多掏钱，把预算花在刀刃上。",color:"var(--accent)"},
+    C:{emoji:"💎",label:"面子驱动型",title:"你买车是给别人看的",desc:"说实话，你买车更多是给别人看的。",advice:"先问自己——买这辆车后生活质量是提升了还是下降了？面子是虚的，月供是真的。品牌向往是合理需求，但得消费能力撑得起。",color:"var(--accent3)"},
+    D:{emoji:"🎢",label:"冲动消费型",title:"你最需要超哥劝退",desc:"你是最需要超哥劝退的人。",advice:"冷静30天再决定。车是现金流的粉碎机，别让它拖垮你的生活。急于掏钱要吃亏，想买就买不等是最贵的习惯。",color:"var(--accent)"}
+  };
+
+  /* ===== 测试状态 ===== */
+  var currentQ=0;
+  var answers=[];
+  var isAnswering=false;
+
+  /* ===== 开始测试 ===== */
+  function startQuiz(){
+    document.getElementById('startCard').style.display='none';
+    document.getElementById('quizArea').style.display='block';
+    currentQ=0;
+    answers=[];
+    renderQuestion(0);
+  }
+
+  /* ===== 渲染题目 ===== */
+  function renderQuestion(idx){
+    var item=questions[idx];
+    var html='';
+    html+='<span class="question-num">Q'+(idx+1).toString().padStart(2,'0')+'</span>';
+    html+='<div class="question-text">'+item.q+'</div>';
+    html+='<div class="options">';
+    for(var i=0;i<item.opts.length;i++){
+      html+='<button class="option-btn" onclick="selectOption(this,'+i+')">';
+      html+='<span class="option-label">'+labels[i]+'</span>';
+      html+='<span class="option-text">'+item.opts[i]+'</span>';
+      html+='</button>';
+    }
+    html+='</div>';
+
+    var card=document.getElementById('questionCard');
+    card.innerHTML=html;
+
+    /* 进度 */
+    var pct=((idx+1)/questions.length)*100;
+    document.getElementById('progressFill').style.width=pct+'%';
+    document.getElementById('progressNum').textContent=(idx+1);
+
+    /* 淡入 */
+    requestAnimationFrame(function(){
+      card.classList.remove('fade-out');
+    });
+  }
+
+  /* ===== 选择选项 ===== */
+  function selectOption(btn,idx){
+    if(isAnswering)return;
+    isAnswering=true;
+
+    /* 高亮选中，禁用其他 */
+    var allBtns=document.querySelectorAll('.option-btn');
+    for(var i=0;i<allBtns.length;i++){
+      allBtns[i].classList.add('disabled');
+      if(allBtns[i]===btn)btn.classList.add('selected');
+    }
+
+    answers.push(labels[idx]);
+
+    var card=document.getElementById('questionCard');
+    card.classList.add('fade-out');
+
+    setTimeout(function(){
+      currentQ++;
+      if(currentQ<questions.length){
+        renderQuestion(currentQ);
+      }else{
+        showResult();
+      }
+      isAnswering=false;
+    },380);
+  }
+
+  /* ===== 显示结果 ===== */
+  function showResult(){
+    /* 统计 */
+    var count={A:0,B:0,C:0,D:0};
+    for(var i=0;i<answers.length;i++){
+      count[answers[i]]=(count[answers[i]]||0)+1;
+    }
+    /* 找最多的，平局按 A>B>C>D 优先级 */
+    var order=["A","B","C","D"];
+    var winType="A";
+    var maxCount=-1;
+    for(var k=0;k<order.length;k++){
+      if(count[order[k]]>maxCount){
+        maxCount=count[order[k]];
+        winType=order[k];
+      }
+    }
+
+    var r=results[winType];
+    var card=document.getElementById('resultCard');
+    card.style.setProperty('--result-color',r.color);
+
+    var inner=document.getElementById('resultInner');
+    var html='';
+    html+='<div class="result-emoji">'+r.emoji+'</div>';
+    html+='<div class="result-type-label">'+r.label+'</div>';
+    html+='<div class="result-title">'+r.title+'</div>';
+    html+='<div class="result-desc">'+r.desc+'</div>';
+    html+='<div class="result-advice"><span class="advice-label">超哥建议</span>'+r.advice+'</div>';
+    /* 统计药丸 */
+    html+='<div class="result-stats">';
+    for(var j=0;j<order.length;j++){
+      var t=order[j];
+      var cls=(t===winType)?'stat-pill lead':'stat-pill';
+      html+='<span class="'+cls+'">'+t+' · '+count[t]+' 票</span>';
+    }
+    html+='</div>';
+    html+='<div class="result-actions">';
+    html+='<button class="btn btn-primary" onclick="restartQuiz()">重新测试</button>';
+    html+='<a class="btn btn-outline" href="cases.html">看真实案例</a>';
+    html+='</div>';
+    html+='<div class="share-tip">结果只供参考，真买车还得算总账。</div>';
+    inner.innerHTML=html;
+
+    document.getElementById('quizArea').style.display='none';
+    card.classList.add('show');
+    /* 滚动到结果 */
+    setTimeout(function(){card.scrollIntoView({behavior:'smooth',block:'center'})},100);
+  }
+
+  /* ===== 重新测试 ===== */
+  function restartQuiz(){
+    document.getElementById('resultCard').classList.remove('show');
+    document.getElementById('quizArea').style.display='none';
+    document.getElementById('startCard').style.display='block';
+    currentQ=0;
+    answers=[];
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  /* ===== 滚动效果 ===== */
+  window.addEventListener('scroll',function(){var n=document.querySelector('.nav');if(n)n.classList.toggle('scrolled',window.scrollY>10)},{passive:true});
+  var btt=document.getElementById('backToTop');if(btt){window.addEventListener('scroll',function(){btt.classList.toggle('show',window.scrollY>400)},{passive:true})}
+  </script>
+<div class="search-overlay" id="searchOverlay" onclick="if(event.target===this)closeSearch()">
+    <div class="search-box">
+      <input type="text" class="search-input" id="searchInput" placeholder="搜索页面内容..." oninput="doSearch(this.value)">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+  </div>
+
+  <script>
+var SEARCH_DATA=[{title:'首页',url:'index.html',kw:'首页 超哥 超车 思维 心智模型 认知 概览'},{title:'八大心智模型',url:'models.html',kw:'模型 经济账本 劝退 需求锚点 时机 短板 面子 马力过剩 油电分层'},{title:'购车流程图',url:'guide.html',kw:'流程 指南 预算 选车 看车 试驾 谈价 合同 验车 提车'},{title:'购车算账器',url:'calculator.html',kw:'算账 计算 折旧 保险 保养 油费 总成本'},{title:'贷款计算器',url:'loan.html',kw:'贷款 月供 利息 首付 计算 金融'},{title:'车型库',url:'database.html',kw:'车型 数据库 筛选 推荐 卡罗拉 思域 凯美瑞 雅阁'},{title:'车型对比',url:'compare.html',kw:'对比 比较 车型 参数 优缺点'},{title:'油电对比',url:'ev-vs-gas.html',kw:'油车 电车 新能源 对比 油费 电费 保值率'},{title:'超哥金句',url:'quotes.html',kw:'金句 名言 买个der 急于掏钱 现金流'},{title:'实战案例',url:'cases.html',kw:'案例 实战 选车 真实 场景'},{title:'投稿故事',url:'stories.html',kw:'故事 投稿 车友 分享 经历'},{title:'购车清单',url:'checklist.html',kw:'清单 检查 提车 验车 注意事项'},{title:'避坑指南',url:'pitfalls.html',kw:'避坑 坑 陷阱 骗局 注意'},{title:'FAQ精选',url:'faq.html',kw:'faq 问答 常见问题 预算 时机 油电 品牌 二手'},{title:'视频精选',url:'videos.html',kw:'视频 劝退 算账 选车 市场分析'},{title:'超哥推荐',url:'recommend.html',kw:'推荐 车型 值得买 性价比'},{title:'购车性格测试',url:'quiz.html',kw:'测试 性格 趣味 理性 面子 冲动'},{title:'超哥在线',url:'chat.html',kw:'在线 聊天 对话 AI 问答'},{title:'留言板',url:'board.html',kw:'留言 评论 车友 讨论'},{title:'超哥画像',url:'about.html',kw:'画像 人物 抖音 博主 超哥超车'}];
+function openSearch(){document.getElementById('searchOverlay').classList.add('open');document.getElementById('searchInput').focus()}
+function closeSearch(){document.getElementById('searchOverlay').classList.remove('open')}
+function doSearch(q){var r=document.getElementById('searchResults');if(!q.trim()){r.innerHTML='';return}var m=SEARCH_DATA.filter(function(d){return(d.title+d.kw).toLowerCase().indexOf(q.toLowerCase())>=0});if(m.length===0){r.innerHTML='<div class="search-no-result">没有找到相关页面</div>';return}r.innerHTML=m.map(function(d){return'<a class="search-result-item" href="'+d.url+'"><div class="sr-title">'+d.title+'</div><div class="sr-kw">'+d.kw+'</div></a>'}).join('')}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSearch()});
+var btt=document.getElementById('backToTop');if(btt){window.addEventListener('scroll',function(){btt.classList.toggle('show',window.scrollY>400)},{passive:true})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
+</script>
+
+</body>
+</html>
