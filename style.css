@@ -85,14 +85,14 @@ body > * { position:relative; z-index:2; }
   position:absolute; top:100%; left:50%; transform:translateX(-50%);
   background:var(--bg2); border:1px solid var(--rule); border-radius:12px;
   padding:0.5rem; min-width:170px; display:none; z-index:200;
-  box-shadow:var(--shadow); animation:fadeUp 0.2s ease-out;
+  box-shadow:var(--shadow); opacity:0; transition:opacity 0.15s ease;
   margin-top:4px;
 }
 /* 透明桥接区：消除按钮和下拉之间的间隙，防止hover断开 */
 .nav-dropdown::before {
   content:''; position:absolute; top:-8px; left:0; right:0; height:8px;
 }
-.nav-group:hover .nav-dropdown, .nav-group.open .nav-dropdown { display:flex; flex-direction:column; gap:0.15rem; }
+.nav-group:hover .nav-dropdown, .nav-group.open .nav-dropdown { display:flex; flex-direction:column; gap:0.15rem; opacity:1; }
 .nav-dropdown a {
   color:var(--muted); text-decoration:none; font-size:0.9rem;
   padding:0.55rem 0.85rem; border-radius:8px; transition:color 0.15s, background 0.15s; white-space:nowrap;
