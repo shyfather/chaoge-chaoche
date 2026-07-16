@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>投稿故事 · 超哥超车</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    /* ===== 返回顶部按钮 ===== */
+    .back-to-top{position:fixed;bottom:2rem;right:2rem;width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s,transform 0.3s;z-index:90;box-shadow:var(--shadow)}
+    .back-to-top.show{opacity:1;pointer-events:auto}
+    .back-to-top:hover{transform:translateY(-3px)}
+
+    /* ===== 故事区容器 ===== */
+    .stories-wrap{max-width:960px;margin:0 auto;padding:0 1.5rem 4rem}
+
+    /* ===== 投稿表单 ===== */
+    .story-form{background:var(--bg2);border:1px solid var(--rule);border-radius:var(--radius);padding:1.5rem;margin-bottom:2.2rem;transition:border-color 0.3s}
+    .story-form:focus-within{border-color:color-mix(in srgb,var(--accent) 35%,transparent)}
+    .form-title{font-size:0.95rem;font-weight:700;color:var(--accent);margin-bottom:1.1rem;display:flex;align-items:center;gap:0.45rem}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin-bottom:0.8rem}
+    .form-field{display:flex;flex-direction:column;gap:0.35rem}
+    .form-field.full{grid-column:1/-1}
+    .form-field label{font-family:var(--font-mono);font-size:0.7rem;color:var(--muted);letter-spacing:0.04em;text-transform:uppercase}
+    .form-field input,.form-field select,.form-field textarea{background:var(--bg);border:1px solid var(--rule);border-radius:10px;padding:0.7rem 0.9rem;color:var(--ink);font-family:var(--font);font-size:0.92rem;transition:border-color 0.2s;width:100%}
+    .form-field input:focus,.form-field select:focus,.form-field textarea:focus{outline:none;border-color:var(--accent)}
+    .form-field input::placeholder,.form-field textarea::placeholder{color:var(--muted)}
+    .form-field textarea{resize:vertical;min-height:90px;line-height:1.6}
+    .form-field select{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%238a8f9a' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 0.9rem center;padding-right:2.2rem}
+    .form-bottom{display:flex;justify-content:space-between;align-items:center;gap:0.8rem;margin-top:0.2rem}
+    .char-counter{font-family:var(--font-mono);font-size:0.74rem;color:var(--muted)}
+    .char-counter.near-limit{color:var(--accent3)}
+    .char-counter.over-limit{color:var(--accent);font-weight:700}
+    .submit-btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:0.7rem 1.6rem;font-family:var(--font);font-weight:700;font-size:0.92rem;cursor:pointer;transition:all 0.2s;white-space:nowrap}
+    .submit-btn:hover{background:color-mix(in srgb,var(--accent) 85%,#000);transform:translateY(-1px)}
+    .submit-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+
+    /* ===== 列表标题 ===== */
+    .list-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.6rem}
+    .list-title{font-size:1rem;color:var(--ink);display:flex;align-items:center;gap:0.45rem;font-weight:700}
+    .list-title .count{font-family:var(--font-mono);color:var(--accent);font-weight:700}
+    .filter-pills{display:flex;gap:0.4rem;flex-wrap:wrap}
+    .filter-pill{font-size:0.76rem;padding:0.28rem 0.7rem;border-radius:20px;border:1px solid var(--rule);background:transparent;color:var(--muted);cursor:pointer;transition:all 0.2s;font-family:var(--font)}
+    .filter-pill:hover{border-color:var(--accent2);color:var(--accent2)}
+    .filter-pill.active{background:color-mix(in srgb,var(--accent) 12%,transparent);border-color:var(--accent);color:var(--accent)}
+
+    /* ===== 故事列表 ===== */
+    .story-list{display:flex;flex-direction:column;gap:1.1rem}
+
+    /* ===== 故事卡片 ===== */
+    .story-card{background:var(--bg2);border:1px solid var(--rule);border-radius:var(--radius);padding:1.5rem;transition:transform 0.25s ease,border-color 0.25s ease,box-shadow 0.25s ease;position:relative;overflow:hidden;animation:fadeUp 0.4s ease-out}
+    .story-card:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--accent) 40%,transparent);box-shadow:var(--shadow)}
+    .story-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:var(--card-accent,var(--accent));opacity:0.85}
+    .story-card.result-buy-right{--card-accent:var(--accent2)}
+    .story-card.result-buy-wrong{--card-accent:var(--accent)}
+    .story-card.result-dissuaded{--card-accent:var(--accent3)}
+
+    .story-head{display:flex;align-items:flex-start;gap:0.9rem;margin-bottom:1rem}
+    .story-avatar{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+    .story-avatar.a1{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 45%,#000))}
+    .story-avatar.a2{background:linear-gradient(135deg,var(--accent2),color-mix(in srgb,var(--accent2) 45%,#000))}
+    .story-avatar.a3{background:linear-gradient(135deg,var(--accent3),color-mix(in srgb,var(--accent3) 45%,#000))}
+    .story-avatar.a4{background:linear-gradient(135deg,var(--accent2),var(--accent))}
+    .story-avatar.a5{background:linear-gradient(135deg,var(--accent3),var(--accent))}
+    .story-meta{flex:1;min-width:0}
+    .story-name-row{display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap}
+    .story-name{font-size:1rem;font-weight:700;color:var(--ink)}
+    .new-badge{font-family:var(--font-mono);font-size:0.62rem;font-weight:700;color:#fff;background:var(--accent);padding:0.12rem 0.4rem;border-radius:4px;letter-spacing:0.05em}
+    .story-loc{font-size:0.76rem;color:var(--muted);display:flex;align-items:center;gap:0.25rem;margin-top:0.15rem}
+    .story-loc .loc-ico{color:var(--accent2)}
+    .story-time{font-size:0.72rem;color:var(--muted);font-family:var(--font-mono);margin-top:0.15rem}
+
+    .story-tags{display:flex;flex-wrap:wrap;gap:0.45rem;margin-bottom:0.9rem}
+    .story-tag{font-size:0.74rem;padding:0.22rem 0.6rem;border-radius:6px;font-family:var(--font-mono);border:1px solid var(--rule);color:var(--muted);background:var(--bg3)}
+    .story-tag.car-tag{color:var(--accent2);border-color:color-mix(in srgb,var(--accent2) 35%,transparent)}
+    .story-tag.budget-tag{color:var(--ink);border-color:var(--rule)}
+    .result-badge{display:inline-flex;align-items:center;gap:0.3rem;font-size:0.76rem;font-weight:700;padding:0.24rem 0.7rem;border-radius:20px;font-family:var(--font)}
+    .result-badge.buy-right{color:var(--accent2);background:color-mix(in srgb,var(--accent2) 12%,transparent);border:1px solid color-mix(in srgb,var(--accent2) 40%,transparent)}
+    .result-badge.buy-wrong{color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px solid color-mix(in srgb,var(--accent) 40%,transparent)}
+    .result-badge.dissuaded{color:var(--accent3);background:color-mix(in srgb,var(--accent3) 12%,transparent);border:1px solid color-mix(in srgb,var(--accent3) 40%,transparent)}
+
+    .story-content{font-size:0.94rem;line-height:1.8;color:var(--ink);word-break:break-word}
+
+    /* ===== 空状态 ===== */
+    .empty-state{text-align:center;padding:3rem 1rem;color:var(--muted)}
+    .empty-state .empty-icon{font-size:2.5rem;margin-bottom:0.8rem;opacity:0.5}
+
+    /* ===== Toast ===== */
+    .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);background:var(--bg3);border:1px solid var(--rule);border-radius:10px;padding:0.7rem 1.4rem;font-size:0.88rem;color:var(--ink);z-index:1000;opacity:0;transition:transform 0.3s,opacity 0.3s;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,0.3)}
+    .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+    .toast.success{border-color:var(--accent2);color:var(--accent2)}
+    .toast.error{border-color:var(--accent);color:var(--accent)}
+
+    /* ===== 底部提示 ===== */
+    .stories-footer{max-width:960px;margin:0 auto;padding:1.5rem 1.5rem 3rem;text-align:center}
+    .stories-footer .tip{font-style:italic;color:var(--muted);font-size:0.85rem;padding:0.9rem 1rem;border-top:1px solid var(--rule)}
+
+    @media(max-width:600px){
+      .stories-wrap{padding:0 1rem 3rem}
+      .story-form{padding:1.2rem}
+      .form-grid{grid-template-columns:1fr}
+      .story-card{padding:1.2rem}
+      .form-bottom{flex-direction:column;align-items:stretch}
+      .submit-btn{width:100%}
+      .story-avatar{width:40px;height:40px;font-size:0.9rem}
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">超哥<span class="accent">超车</span></a>
+      <div class="nav-right">
+        <div class="nav-links">
+          <a href="index.html">首页</a>
+          <a href="models.html">模型</a>
+          <a href="guide.html">流程</a>
+          <a href="calculator.html">算账器</a>
+          <a href="loan.html">贷款</a>
+          <a href="database.html">车型库</a>
+          <a href="compare.html">对比</a>
+          <a href="ev-vs-gas.html">油电对比</a>
+          <a href="quotes.html">金句</a>
+          <a href="cases.html">案例</a>
+          <a href="stories.html" class="active">故事</a>
+          <a href="checklist.html">清单</a>
+          <a href="pitfalls.html">避坑</a>
+          <a href="faq.html">FAQ</a>
+          <a href="videos.html">视频</a>
+          <a href="recommend.html">推荐</a>
+          <a href="quiz.html">测试</a>
+          <a href="chat.html">在线</a>
+          <a href="board.html">留言</a>
+          <a href="about.html">画像</a>
+        </div>
+        <button class="nav-search-btn" onclick="openSearch()" title="搜索">🔍</button>
+        <div class="theme-switch">
+          <button class="theme-btn" onclick="toggleThemeMenu()" title="切换主题">🎨</button>
+          <div class="theme-menu" id="themeMenu">
+            <button class="theme-option" data-theme="dark" onclick="setTheme('dark')"><span class="theme-swatch" style="background:#0f1115;border-color:#ff6b35"></span>暗夜橙</button>
+            <button class="theme-option" data-theme="light" onclick="setTheme('light')"><span class="theme-swatch" style="background:#f8f9fa;border-color:#ff6b35"></span>极简白</button>
+            <button class="theme-option" data-theme="forest" onclick="setTheme('forest')"><span class="theme-swatch" style="background:#0a1f1c;border-color:#52d4a8"></span>墨绿森林</button>
+            <button class="theme-option" data-theme="cyber" onclick="setTheme('cyber')"><span class="theme-swatch" style="background:#0d0b1a;border-color:#c026d3"></span>暗紫赛博</button>
+            <button class="theme-option" data-theme="paper" onclick="setTheme('paper')"><span class="theme-swatch" style="background:#1a1612;border-color:#e8a87c"></span>暖纸棕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <article class="page">
+    <section class="page-hero" style="border-bottom:1px solid var(--rule);text-align:center;padding:4rem 0 2.5rem;">
+      <span class="label-tag">车友分享</span>
+      <h1 style="font-size:clamp(2rem,6vw,3rem);font-weight:700;margin-bottom:0.8rem;letter-spacing:-0.02em;">投稿<span class="gradient-text">故事</span></h1>
+      <p style="color:var(--muted);max-width:580px;margin:0 auto;line-height:1.7;">真实车友的买车经历，买对的、买亏的、被劝退的，都在这。别人的教训，就是你的经验。</p>
+    </section>
+
+    <div class="stories-wrap">
+
+      <!-- 投稿表单 -->
+      <form class="story-form" id="storyForm" onsubmit="return false">
+        <div class="form-title">✏️ 分享你的买车故事</div>
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="fNick">昵称</label>
+            <input type="text" id="fNick" placeholder="怎么称呼你" maxlength="12">
+          </div>
+          <div class="form-field">
+            <label for="fLoc">属地</label>
+            <input type="text" id="fLoc" placeholder="如 广东深圳" maxlength="12">
+          </div>
+          <div class="form-field">
+            <label for="fCar">车型</label>
+            <input type="text" id="fCar" placeholder="如 丰田凯美瑞" maxlength="20">
+          </div>
+          <div class="form-field">
+            <label for="fBudget">预算 / 花费</label>
+            <input type="text" id="fBudget" placeholder="如 22万 / 35万(贷款)" maxlength="16">
+          </div>
+          <div class="form-field full">
+            <label for="fResult">结局</label>
+            <select id="fResult">
+              <option value="buy-right">买对了 ✅</option>
+              <option value="buy-wrong">买亏了 ❌</option>
+              <option value="dissuaded">被劝退了 🛑</option>
+            </select>
+          </div>
+          <div class="form-field full">
+            <label for="fContent">故事内容（限 200 字）</label>
+            <textarea id="fContent" placeholder="说说你的买车经过、花了多少、后悔还是庆幸……给后来人提个醒" maxlength="200"></textarea>
+          </div>
+        </div>
+        <div class="form-bottom">
+          <span class="char-counter" id="charCounter">0 / 200</span>
+          <button type="button" class="submit-btn" id="submitBtn" onclick="submitStory()">发布故事</button>
+        </div>
+      </form>
+
+      <!-- 列表标题 -->
+      <div class="list-header">
+        <div class="list-title">📖 全部故事 <span class="count" id="storyCount">0</span> 条</div>
+        <div class="filter-pills" id="filterPills">
+          <button class="filter-pill active" data-filter="all" onclick="setFilter('all')">全部</button>
+          <button class="filter-pill" data-filter="buy-right" onclick="setFilter('buy-right')">买对了</button>
+          <button class="filter-pill" data-filter="buy-wrong" onclick="setFilter('buy-wrong')">买亏了</button>
+          <button class="filter-pill" data-filter="dissuaded" onclick="setFilter('dissuaded')">被劝退</button>
+        </div>
+      </div>
+
+      <!-- 故事列表 -->
+      <div class="story-list" id="storyList"></div>
+
+    </div>
+  </article>
+
+  <div class="share-bar">
+    <span class="share-label">分享：</span>
+    <button class="share-btn" onclick="navigator.clipboard.writeText(window.location.href).then(()=>{this.textContent='已复制!';setTimeout(()=>this.textContent='复制链接',1500)})">复制链接</button>
+    <button class="share-btn" onclick="window.open('https://service.weibo.com/share/share.php?url='+encodeURIComponent(window.location.href)+'&title='+encodeURIComponent(document.title))">微博</button>
+  </div>
+
+    <footer class="stories-footer">
+    <p class="tip">投稿故事保存在你的浏览器本地，换个设备看不到。买车是为生活服务，不是拖累生活。</p>
+  </footer>
+
+  <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部">↑</button>
+  <div class="toast" id="toast"></div>
+
+  <script>
+  /* ===== 主题切换 ===== */
+  function setTheme(t){
+    document.documentElement.setAttribute('data-theme',t);
+    try{localStorage.setItem('chaoge-theme',t)}catch(e){}
+    document.querySelectorAll('.theme-option').forEach(function(o){o.classList.toggle('active',o.dataset.theme===t)});
+    var m=document.getElementById('themeMenu');if(m)m.classList.remove('open');
+  }
+  function toggleThemeMenu(){document.getElementById('themeMenu').classList.toggle('open')}
+  document.addEventListener('click',function(e){if(!e.target.closest('.theme-switch')){var m=document.getElementById('themeMenu');if(m)m.classList.remove('open')}});
+  (function(){try{var t=localStorage.getItem('chaoge-theme')||'dark';setTheme(t)}catch(e){setTheme('dark')}})();
+
+  /* ===== 配置 ===== */
+  var STORAGE_KEY='chaoge_stories';
+  var MAX_LEN=200;
+
+  /* ===== 种子故事 ===== */
+  var seedStories=[
+    {id:'seed-1',nick:'老张',loc:'广东深圳',car:'丰田凯美瑞',budget:'22万',result:'buy-right',content:'月薪1万2，存了3年，全款拿下凯美瑞。超哥说得对，B级车保值率高，养车也省心，月油费500左右，保险3500一年，完全没压力。建议工薪族别硬上豪车，凯美瑞真的够用。',time:'2026-06-12',isNew:false},
+    {id:'seed-2',nick:'小李',loc:'浙江杭州',car:'宝马3系',budget:'35万(贷款)',result:'buy-wrong',content:"月薪8000，贷款5年买3系，月供5200。买车半年后公司裁员，月供直接压垮我。现在想卖掉，贬值8万。超哥那句'车是现金流的粉碎机'我算是亲身体验了。",time:'2026-06-20',isNew:false},
+    {id:'seed-3',nick:'阿强',loc:'四川成都',car:'二手卡罗拉',budget:'8万',result:'dissuaded',content:'本来想贷款买25万的车，看了超哥的视频算了一笔账：月供+保险+油费+保养，每月支出4500，占我收入一半。最后买了辆8万的二手卡罗拉，省下的钱付了首付买房。感谢超哥劝退。',time:'2026-06-28',isNew:false},
+    {id:'seed-4',nick:'小王',loc:'北京',car:'比亚迪秦PLUS',budget:'11万',result:'buy-right',content:'第一台车，纠结油车电车半年。最后听超哥的建议，插混秦PLUS，亏电油耗3.8L，比纯油省一半。通勤50公里，月油费不到200。没有续航焦虑，完美。',time:'2026-07-02',isNew:false},
+    {id:'seed-5',nick:'大刘',loc:'湖北武汉',car:'大众途观L',budget:'24万',result:'buy-wrong',content:'2025年初买的，结果2026年降价3万。而且2.0T油耗偏高，市区11个油。当时该听超哥的等一等的，急于掏钱果然要吃亏。',time:'2026-07-08',isNew:false}
+  ];
+
+  /* ===== 结局映射 ===== */
+  var resultMap={
+    'buy-right':{label:'买对了',icon:'✅',cls:'buy-right'},
+    'buy-wrong':{label:'买亏了',icon:'❌',cls:'buy-wrong'},
+    'dissuaded':{label:'被劝退了',icon:'🛑',cls:'dissuaded'}
+  };
+
+  /* ===== 状态 ===== */
+  var userStories=[];
+  var currentFilter='all';
+
+  /* ===== 工具函数 ===== */
+  function escapeHtml(text){
+    var div=document.createElement('div');
+    div.textContent=text==null?'':String(text);
+    return div.innerHTML;
+  }
+  function getAvatarClass(nick){
+    var colors=['a1','a2','a3','a4','a5'];
+    var hash=0;
+    var s=nick||'匿';
+    for(var i=0;i<s.length;i++){hash=s.charCodeAt(i)+((hash<<5)-hash)}
+    return colors[Math.abs(hash)%colors.length];
+  }
+  function getAvatarText(nick){
+    if(!nick)return'匿';
+    var ch=nick.charAt(0);
+    return ch.toUpperCase();
+  }
+  function formatTime(ts){
+    if(typeof ts==='string')return ts;
+    var now=Date.now();
+    var diff=now-ts;
+    if(diff<60000)return'刚刚';
+    if(diff<3600000)return Math.floor(diff/60000)+'分钟前';
+    if(diff<86400000)return Math.floor(diff/3600000)+'小时前';
+    if(diff<86400000*7)return Math.floor(diff/86400000)+'天前';
+    var d=new Date(ts);
+    return (d.getMonth()+1)+'月'+d.getDate()+'日';
+  }
+  function showToast(msg,type){
+    var t=document.getElementById('toast');
+    t.textContent=msg;
+    t.className='toast '+(type||'')+' show';
+    setTimeout(function(){t.classList.remove('show')},2500);
+  }
+
+  /* ===== localStorage 读写 ===== */
+  function loadUserStories(){
+    try{
+      var raw=localStorage.getItem(STORAGE_KEY);
+      if(!raw)return[];
+      var arr=JSON.parse(raw);
+      return Array.isArray(arr)?arr:[];
+    }catch(e){return[]}
+  }
+  function saveUserStories(arr){
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(arr))}catch(e){}
+  }
+
+  /* ===== 合并所有故事（用户投稿在前） ===== */
+  function getAllStories(){
+    return userStories.concat(seedStories);
+  }
+
+  /* ===== 渲染 ===== */
+  function renderStories(){
+    var all=getAllStories();
+    var list=document.getElementById('storyList');
+    var countEl=document.getElementById('storyCount');
+
+    /* 过滤 */
+    var filtered=[];
+    for(var i=0;i<all.length;i++){
+      if(currentFilter==='all'||all[i].result===currentFilter){
+        filtered.push(all[i]);
+      }
+    }
+    countEl.textContent=filtered.length;
+
+    if(filtered.length===0){
+      list.innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><p>这个分类下还没有故事，换个筛选看看？</p></div>';
+      return;
+    }
+
+    var html='';
+    for(var j=0;j<filtered.length;j++){
+      var s=filtered[j];
+      var rm=resultMap[s.result]||resultMap['buy-right'];
+      var avCls=getAvatarClass(s.nick);
+      var avText=getAvatarText(s.nick);
+      var newBadge=s.isNew?'<span class="new-badge">NEW</span>':'';
+      var timeStr=formatTime(s.time);
+
+      html+='<div class="story-card result-'+rm.cls+'">';
+      html+='  <div class="story-head">';
+      html+='    <div class="story-avatar '+avCls+'">'+escapeHtml(avText)+'</div>';
+      html+='    <div class="story-meta">';
+      html+='      <div class="story-name-row">';
+      html+='        <span class="story-name">'+escapeHtml(s.nick||'匿名车友')+'</span>';
+      html+=        newBadge;
+      html+='      </div>';
+      html+='      <div class="story-loc"><span class="loc-ico">📍</span>'+escapeHtml(s.loc||'未知属地')+'</div>';
+      html+='      <div class="story-time">'+escapeHtml(timeStr)+'</div>';
+      html+='    </div>';
+      html+='  </div>';
+      html+='  <div class="story-tags">';
+      html+='    <span class="result-badge '+rm.cls+'">'+rm.icon+' '+rm.label+'</span>';
+      if(s.car)html+='    <span class="story-tag car-tag">🚗 '+escapeHtml(s.car)+'</span>';
+      if(s.budget)html+='    <span class="story-tag budget-tag">💰 '+escapeHtml(s.budget)+'</span>';
+      html+='  </div>';
+      html+='  <div class="story-content">'+escapeHtml(s.content)+'</div>';
+      html+='</div>';
+    }
+    list.innerHTML=html;
+  }
+
+  /* ===== 字数计数 ===== */
+  function updateCharCounter(){
+    var ta=document.getElementById('fContent');
+    var counter=document.getElementById('charCounter');
+    var len=ta.value.length;
+    counter.textContent=len+' / '+MAX_LEN;
+    counter.classList.remove('near-limit','over-limit');
+    if(len>=MAX_LEN){counter.classList.add('over-limit')}
+    else if(len>=MAX_LEN*0.85){counter.classList.add('near-limit')}
+  }
+
+  /* ===== 提交故事 ===== */
+  function submitStory(){
+    var nick=document.getElementById('fNick').value.trim();
+    var loc=document.getElementById('fLoc').value.trim();
+    var car=document.getElementById('fCar').value.trim();
+    var budget=document.getElementById('fBudget').value.trim();
+    var result=document.getElementById('fResult').value;
+    var content=document.getElementById('fContent').value.trim();
+
+    if(!content){
+      var ta=document.getElementById('fContent');
+      ta.focus();
+      ta.style.borderColor='var(--accent)';
+      setTimeout(function(){ta.style.borderColor=''},1500);
+      showToast('请写点故事内容','error');
+      return;
+    }
+    if(content.length>MAX_LEN){
+      showToast('故事内容不能超过 '+MAX_LEN+' 字','error');
+      return;
+    }
+
+    var newStory={
+      id:'u_'+Date.now()+'_'+Math.random().toString(36).substr(2,6),
+      nick:nick||'匿名车友',
+      loc:loc||'未知属地',
+      car:car||'',
+      budget:budget||'',
+      result:result,
+      content:content,
+      time:Date.now(),
+      isNew:true
+    };
+
+    /* 之前的投稿取消 NEW 标记 */
+    for(var i=0;i<userStories.length;i++){
+      userStories[i].isNew=false;
+    }
+
+    userStories.unshift(newStory);
+    saveUserStories(userStories);
+
+    /* 清空表单 */
+    document.getElementById('storyForm').reset();
+    updateCharCounter();
+
+    /* 切回全部，确保新故事可见 */
+    currentFilter='all';
+    document.querySelectorAll('.filter-pill').forEach(function(p){
+      p.classList.toggle('active',p.dataset.filter==='all');
+    });
+
+    renderStories();
+    showToast('故事发布成功！','success');
+
+    /* 滚动到列表顶部 */
+    setTimeout(function(){
+      var list=document.getElementById('storyList');
+      var first=list.querySelector('.story-card');
+      if(first)first.scrollIntoView({behavior:'smooth',block:'center'});
+    },100);
+  }
+
+  /* ===== 筛选 ===== */
+  function setFilter(f){
+    currentFilter=f;
+    document.querySelectorAll('.filter-pill').forEach(function(p){
+      p.classList.toggle('active',p.dataset.filter===f);
+    });
+    renderStories();
+  }
+
+  /* ===== 初始化 ===== */
+  (function(){
+    userStories=loadUserStories();
+    /* 标记保留：只有最新一条 isNew，旧的取消（防止刷新后全是 NEW） */
+    if(userStories.length>0){
+      for(var i=1;i<userStories.length;i++)userStories[i].isNew=false;
+      userStories[0].isNew=true;
+    }
+    renderStories();
+
+    document.getElementById('fContent').addEventListener('input',updateCharCounter);
+  })();
+
+  /* ===== 滚动效果 ===== */
+  window.addEventListener('scroll',function(){var n=document.querySelector('.nav');if(n)n.classList.toggle('scrolled',window.scrollY>10)},{passive:true});
+  var btt=document.getElementById('backToTop');if(btt){window.addEventListener('scroll',function(){btt.classList.toggle('show',window.scrollY>400)},{passive:true})}
+  </script>
+<div class="search-overlay" id="searchOverlay" onclick="if(event.target===this)closeSearch()">
+    <div class="search-box">
+      <input type="text" class="search-input" id="searchInput" placeholder="搜索页面内容..." oninput="doSearch(this.value)">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+  </div>
+
+  <script>
+var SEARCH_DATA=[{title:'首页',url:'index.html',kw:'首页 超哥 超车 思维 心智模型 认知 概览'},{title:'八大心智模型',url:'models.html',kw:'模型 经济账本 劝退 需求锚点 时机 短板 面子 马力过剩 油电分层'},{title:'购车流程图',url:'guide.html',kw:'流程 指南 预算 选车 看车 试驾 谈价 合同 验车 提车'},{title:'购车算账器',url:'calculator.html',kw:'算账 计算 折旧 保险 保养 油费 总成本'},{title:'贷款计算器',url:'loan.html',kw:'贷款 月供 利息 首付 计算 金融'},{title:'车型库',url:'database.html',kw:'车型 数据库 筛选 推荐 卡罗拉 思域 凯美瑞 雅阁'},{title:'车型对比',url:'compare.html',kw:'对比 比较 车型 参数 优缺点'},{title:'油电对比',url:'ev-vs-gas.html',kw:'油车 电车 新能源 对比 油费 电费 保值率'},{title:'超哥金句',url:'quotes.html',kw:'金句 名言 买个der 急于掏钱 现金流'},{title:'实战案例',url:'cases.html',kw:'案例 实战 选车 真实 场景'},{title:'投稿故事',url:'stories.html',kw:'故事 投稿 车友 分享 经历'},{title:'购车清单',url:'checklist.html',kw:'清单 检查 提车 验车 注意事项'},{title:'避坑指南',url:'pitfalls.html',kw:'避坑 坑 陷阱 骗局 注意'},{title:'FAQ精选',url:'faq.html',kw:'faq 问答 常见问题 预算 时机 油电 品牌 二手'},{title:'视频精选',url:'videos.html',kw:'视频 劝退 算账 选车 市场分析'},{title:'超哥推荐',url:'recommend.html',kw:'推荐 车型 值得买 性价比'},{title:'购车性格测试',url:'quiz.html',kw:'测试 性格 趣味 理性 面子 冲动'},{title:'超哥在线',url:'chat.html',kw:'在线 聊天 对话 AI 问答'},{title:'留言板',url:'board.html',kw:'留言 评论 车友 讨论'},{title:'超哥画像',url:'about.html',kw:'画像 人物 抖音 博主 超哥超车'}];
+function openSearch(){document.getElementById('searchOverlay').classList.add('open');document.getElementById('searchInput').focus()}
+function closeSearch(){document.getElementById('searchOverlay').classList.remove('open')}
+function doSearch(q){var r=document.getElementById('searchResults');if(!q.trim()){r.innerHTML='';return}var m=SEARCH_DATA.filter(function(d){return(d.title+d.kw).toLowerCase().indexOf(q.toLowerCase())>=0});if(m.length===0){r.innerHTML='<div class="search-no-result">没有找到相关页面</div>';return}r.innerHTML=m.map(function(d){return'<a class="search-result-item" href="'+d.url+'"><div class="sr-title">'+d.title+'</div><div class="sr-kw">'+d.kw+'</div></a>'}).join('')}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSearch()});
+var btt=document.getElementById('backToTop');if(btt){window.addEventListener('scroll',function(){btt.classList.toggle('show',window.scrollY>400)},{passive:true})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
+</script>
+
+</body>
+</html>
