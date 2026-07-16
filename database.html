@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>车型库 · 超哥超车</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    /* ===== database.html 页面专属样式 ===== */
+
+    /* 页面标题区 */
+    .page-hero {
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--rule);
+      text-align: center;
+      padding: 4.5rem 1.5rem 3rem;
+      background: radial-gradient(ellipse at 50% 0%, var(--bg2) 0%, var(--bg) 60%, var(--bg) 100%);
+    }
+    .page-hero::before {
+      content: '';
+      position: absolute;
+      top: -40%; left: 50%;
+      transform: translateX(-50%);
+      width: 90%; height: 140%;
+      background: radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 16%, transparent) 0%, color-mix(in srgb, var(--accent) 5%, transparent) 35%, transparent 65%);
+      filter: blur(20px);
+      pointer-events: none;
+    }
+    .page-hero > * { position: relative; z-index: 1; }
+    .page-hero h1 {
+      font-size: clamp(2rem, 6vw, 3rem);
+      font-weight: 700;
+      margin-bottom: 0.8rem;
+      letter-spacing: -0.02em;
+    }
+    .page-hero h1 .accent { color: var(--accent); }
+    .page-hero .sub {
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* ===== 筛选器 ===== */
+    .filter-bar {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 1.3rem 1.4rem;
+      margin-bottom: 1.6rem;
+    }
+    .filter-group { margin-bottom: 1.1rem; }
+    .filter-group:last-child { margin-bottom: 0; }
+    .filter-label {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      margin-bottom: 0.6rem;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .filter-label .hint { color: var(--accent2); font-size: 0.7rem; }
+
+    .chip-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .chip {
+      padding: 0.45rem 0.95rem;
+      background: var(--bg3);
+      border: 1px solid var(--rule);
+      border-radius: 20px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font);
+      white-space: nowrap;
+    }
+    .chip:hover { color: var(--ink); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+    .chip.active {
+      background: color-mix(in srgb, var(--accent) 16%, transparent);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .chip.budget.active {
+      background: color-mix(in srgb, var(--accent2) 16%, transparent);
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    .filter-foot {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 1.2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--rule);
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .result-count {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .result-count strong { color: var(--accent); font-weight: 700; font-size: 1.05rem; }
+    .reset-btn {
+      padding: 0.4rem 0.9rem;
+      background: transparent;
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      cursor: pointer;
+      font-family: var(--font);
+      transition: all 0.2s;
+    }
+    .reset-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* ===== 车型网格 ===== */
+    .car-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.1rem;
+    }
+    @media(max-width:960px){ .car-grid{ grid-template-columns:1fr 1fr; } }
+    @media(max-width:600px){ .car-grid{ grid-template-columns:1fr; } }
+
+    .car-card {
+      background: var(--bg2);
+      border: 1px solid var(--rule);
+      border-top: 3px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 1.3rem 1.3rem 1.1rem;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.25s cubic-bezier(.4,0,.2,1), border-color 0.25s, box-shadow 0.25s;
+      cursor: pointer;
+    }
+    .car-card:hover {
+      transform: translateY(-3px);
+      border-top-color: var(--accent2);
+      box-shadow: var(--shadow);
+    }
+    .car-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 6%, transparent), transparent);
+      transition: left 0.6s ease;
+    }
+    .car-card:hover::after { left: 100%; }
+
+    .car-head { display: flex; align-items: flex-start; gap: 0.7rem; margin-bottom: 0.5rem; }
+    .car-emoji { font-size: 1.5rem; line-height: 1.2; flex-shrink: 0; }
+    .car-name { font-size: 1.05rem; font-weight: 700; color: var(--ink); letter-spacing: -0.01em; line-height: 1.3; }
+    .car-type {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      color: var(--muted);
+      background: var(--bg3);
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      margin-left: 0.4rem;
+      vertical-align: middle;
+    }
+    .car-price {
+      font-family: var(--font-mono);
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 0.7rem;
+    }
+    .car-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.8rem; }
+    .car-tag {
+      font-size: 0.7rem;
+      padding: 0.12rem 0.5rem;
+      border-radius: 10px;
+      border: 1px solid color-mix(in srgb, var(--accent2) 35%, transparent);
+      color: var(--accent2);
+      background: color-mix(in srgb, var(--accent2) 8%, transparent);
+    }
+    .car-tag.t-newenergy { color: var(--accent3); border-color: color-mix(in srgb, var(--accent3) 40%, transparent); background: color-mix(in srgb, var(--accent3) 8%, transparent); }
+
+    .car-comment {
+      font-size: 0.88rem;
+      color: var(--ink);
+      line-height: 1.6;
+      margin-bottom: 0.8rem;
+      font-style: italic;
+      position: relative;
+      padding-left: 0.7rem;
+      border-left: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+
+    .car-toggle {
+      display: flex; align-items: center; gap: 0.35rem;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: var(--accent2);
+      margin-top: 0.2rem;
+    }
+    .car-toggle .arrow { transition: transform 0.25s; display: inline-block; }
+    .car-card.open .car-toggle .arrow { transform: rotate(90deg); }
+
+    .car-detail {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease;
+    }
+    .car-card.open .car-detail { max-height: 600px; }
+    .car-detail-inner {
+      padding-top: 0.9rem;
+      margin-top: 0.7rem;
+      border-top: 1px solid var(--rule);
+    }
+    .detail-block { margin-bottom: 0.85rem; }
+    .detail-block:last-child { margin-bottom: 0; }
+    .detail-label {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 0.35rem;
+    }
+    .detail-pros .detail-label { color: var(--accent2); }
+    .detail-cons .detail-label { color: var(--accent3); }
+    .detail-audience .detail-label { color: var(--accent); }
+    .detail-list { list-style: none; padding: 0; margin: 0; }
+    .detail-list li {
+      font-size: 0.85rem;
+      color: var(--ink);
+      line-height: 1.55;
+      padding-left: 1.1rem;
+      position: relative;
+      margin-bottom: 0.2rem;
+    }
+    .detail-pros .detail-list li::before { content: '✓'; position: absolute; left: 0; color: var(--accent2); font-weight: 700; }
+    .detail-cons .detail-list li::before { content: '✗'; position: absolute; left: 0; color: var(--accent3); font-weight: 700; }
+    .detail-audience p { font-size: 0.86rem; color: var(--muted); line-height: 1.6; margin: 0; padding-left: 1.1rem; position: relative; }
+    .detail-audience p::before { content: '👤'; position: absolute; left: 0; font-size: 0.8rem; }
+
+    /* 空状态 */
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 3.5rem 1rem;
+      color: var(--muted);
+    }
+    .empty-state .emoji { font-size: 2.4rem; margin-bottom: 0.8rem; }
+    .empty-state p { font-size: 0.95rem; margin-bottom: 0.4rem; }
+    .empty-state .sub { font-size: 0.82rem; color: var(--muted); }
+
+    .db-foot-note {
+      margin-top: 2rem;
+      background: color-mix(in srgb, var(--accent) 7%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      font-size: 0.88rem;
+      color: var(--ink);
+      line-height: 1.65;
+    }
+    .db-foot-note strong { color: var(--accent); }
+
+    /* 返回顶部 */
+    .back-to-top{position:fixed;bottom:2rem;right:2rem;width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s,transform 0.3s;z-index:90;box-shadow:var(--shadow)}
+    .back-to-top.show{opacity:1;pointer-events:auto}
+    .back-to-top:hover{transform:translateY(-3px)}
+
+    .fade-up { opacity: 0; animation: fadeUp 0.5s ease-out forwards; }
+  </style>
+</head>
+<body>
+  <!-- 导航栏 -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">超哥<span class="accent">超车</span></a>
+      <div class="nav-right">
+        <div class="nav-links">
+          <a href="index.html">首页</a>
+          <a href="models.html">模型</a>
+          <a href="guide.html">流程</a>
+          <a href="calculator.html">算账器</a>
+          <a href="loan.html">贷款</a>
+          <a href="database.html" class="active">车型库</a>
+          <a href="compare.html">对比</a>
+          <a href="ev-vs-gas.html">油电对比</a>
+          <a href="quotes.html">金句</a>
+          <a href="cases.html">案例</a>
+          <a href="stories.html">故事</a>
+          <a href="checklist.html">清单</a>
+          <a href="pitfalls.html">避坑</a>
+          <a href="faq.html">FAQ</a>
+          <a href="videos.html">视频</a>
+          <a href="recommend.html">推荐</a>
+          <a href="quiz.html">测试</a>
+          <a href="chat.html">在线</a>
+          <a href="board.html">留言</a>
+          <a href="about.html">画像</a>
+        </div>
+        <button class="nav-search-btn" onclick="openSearch()" title="搜索">🔍</button>
+        <div class="theme-switch">
+          <button class="theme-btn" onclick="toggleThemeMenu()" title="切换主题">🎨</button>
+          <div class="theme-menu" id="themeMenu">
+            <button class="theme-option" data-theme="dark" onclick="setTheme('dark')"><span class="theme-swatch" style="background:#0f1115;border-color:#ff6b35"></span>暗夜橙</button>
+            <button class="theme-option" data-theme="light" onclick="setTheme('light')"><span class="theme-swatch" style="background:#f8f9fa;border-color:#ff6b35"></span>极简白</button>
+            <button class="theme-option" data-theme="forest" onclick="setTheme('forest')"><span class="theme-swatch" style="background:#0a1f1c;border-color:#52d4a8"></span>墨绿森林</button>
+            <button class="theme-option" data-theme="cyber" onclick="setTheme('cyber')"><span class="theme-swatch" style="background:#0d0b1a;border-color:#c026d3"></span>暗紫赛博</button>
+            <button class="theme-option" data-theme="paper" onclick="setTheme('paper')"><span class="theme-swatch" style="background:#1a1612;border-color:#e8a87c"></span>暖纸棕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 页面内容 -->
+  <article class="page" style="padding:0;">
+    <!-- 页面标题区 -->
+    <section class="page-hero">
+      <span class="label-tag fade-up">选车工具</span>
+      <h1 class="fade-up">车型<span class="accent">库</span></h1>
+      <p class="sub fade-up">20 款热门车，超哥逐个点评。先按预算和需求筛，再看优缺点——别只看销量榜，要看适不适合你。</p>
+    </section>
+
+    <section>
+      <!-- 筛选器 -->
+      <div class="filter-bar">
+        <div class="filter-group">
+          <div class="filter-label">▸ 预算区间 <span class="hint">单选，点中的再点一次取消</span></div>
+          <div class="chip-row" id="budgetRow">
+            <button class="chip budget" data-b="5-10">5-10 万</button>
+            <button class="chip budget" data-b="10-15">10-15 万</button>
+            <button class="chip budget" data-b="15-20">15-20 万</button>
+            <button class="chip budget" data-b="20-30">20-30 万</button>
+            <button class="chip budget" data-b="30+">30 万+</button>
+          </div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">▸ 需求标签 <span class="hint">多选，需同时满足</span></div>
+          <div class="chip-row" id="tagRow">
+            <button class="chip" data-t="省心家用">省心家用</button>
+            <button class="chip" data-t="面子品牌">面子品牌</button>
+            <button class="chip" data-t="大空间">大空间</button>
+            <button class="chip" data-t="动力强">动力强</button>
+            <button class="chip" data-t="省油">省油</button>
+            <button class="chip" data-t="新能源">新能源</button>
+          </div>
+        </div>
+        <div class="filter-foot">
+          <div class="result-count">匹配 <strong id="count">20</strong> 款车</div>
+          <button class="reset-btn" id="resetBtn">重置筛选</button>
+        </div>
+      </div>
+
+      <!-- 车型网格 -->
+      <div class="car-grid" id="carGrid"></div>
+
+      <div class="db-foot-note">
+        <strong>超哥提醒：</strong>车型库只列主流款，价格是终端参考区间，实际以当地报价为准。别拿销量当唯一标准——<strong>销量高的不一定适合你，适合你的才是好车</strong>。看完还是拿不准，去 <a href="recommend.html" style="color:var(--accent2);">推荐</a> 页让超哥帮你定。
+      </div>
+    </section>
+  <div class="share-bar">
+    <span class="share-label">分享：</span>
+    <button class="share-btn" onclick="navigator.clipboard.writeText(window.location.href).then(()=>{this.textContent='已复制!';setTimeout(()=>this.textContent='复制链接',1500)})">复制链接</button>
+    <button class="share-btn" onclick="window.open('https://service.weibo.com/share/share.php?url='+encodeURIComponent(window.location.href)+'&title='+encodeURIComponent(document.title))">微博</button>
+  </div>
+
+  </article>
+
+  <!-- 返回顶部按钮 -->
+  <button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="回到顶部">↑</button>
+
+  <!-- 公共脚本 -->
+  <script>
+  function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('chaoge-theme',t)}catch(e){}document.querySelectorAll('.theme-option').forEach(o=>o.classList.toggle('active',o.dataset.theme===t))}
+  function toggleThemeMenu(){document.getElementById('themeMenu').classList.toggle('open')}
+  document.addEventListener('click',e=>{if(!e.target.closest('.theme-switch'))document.getElementById('themeMenu')?.classList.remove('open')});
+  (function(){try{const t=localStorage.getItem('chaoge-theme')||'dark';setTheme(t)}catch(e){setTheme('dark')}})();
+  window.addEventListener('scroll',function(){var n=document.querySelector('.nav');if(n)n.classList.toggle('scrolled',window.scrollY>10)},{passive:true});
+  var btt=document.getElementById('backToTop');if(btt){window.addEventListener('scroll',function(){btt.classList.toggle('show',window.scrollY>400)},{passive:true})}
+  </script>
+
+  <!-- 车型数据与筛选脚本 -->
+  <script>
+  (function(){
+    // 预算区间定义
+    var BUDGETS = {
+      '5-10':  [5,10],
+      '10-15': [10,15],
+      '15-20': [15,20],
+      '20-30': [20,30],
+      '30+':   [30,999]
+    };
+
+    // 20 款车型数据
+    var CARS = [
+      { name:'丰田卡罗拉', emoji:'🚗', type:'轿车', min:10, max:14, price:'10-14 万', tags:['省心家用','省油'],
+        comment:'保值率王，养车最省心的选择之一。',
+        pros:['双擎混动省油到变态，市区4个油','三大件皮实，开10年不大修','保值率高，换车不心疼'],
+        cons:['动力佛系，超车要提前规划','隔音一般，高速风噪明显'],
+        audience:'通勤代步为主、追求省心省钱的家用第一台车。' },
+      { name:'本田思域', emoji:'🏎️', type:'轿车', min:12, max:17, price:'12-17 万', tags:['动力强','省心家用'],
+        comment:'1.5T动力猛，年轻人第一台运动轿车。',
+        pros:['1.5T地球梦动力随叫随到','操控灵活，弯道有信心','保值率在运动轿车里算高'],
+        cons:['CVT变速箱少了点换挡乐趣','底盘偏硬，过减速带颠'],
+        audience:'年轻人、喜欢驾驶感、预算有限又想有点运动范。' },
+      { name:'比亚迪秦PLUS DM-i', emoji:'⚡', type:'新能源', min:9, max:14, price:'9-14 万', tags:['新能源','省油'],
+        comment:'亏电油耗3.8L，插混卷王。',
+        pros:['亏电状态也省油，不焦虑续航','绿牌免购置税，落地省一万多','配置拉满，同价位卷到飞起'],
+        cons:['纯电续航短，没桩当油车开','品牌溢价弱于合资'],
+        audience:'有家充条件、想省油钱又怕纯电焦虑的通勤族。' },
+      { name:'大众朗逸', emoji:'🚗', type:'轿车', min:9, max:13, price:'9-13 万', tags:['省心家用','大空间'],
+        comment:'德系品质入门款，空间够用。',
+        pros:['底盘扎实，高速稳','空间在A级里算大','保有量大，维修便宜'],
+        cons:['1.5L动力偏肉','内饰塑料感强'],
+        audience:'预算10万出头、要合资品牌又要大空间的务实家庭。' },
+      { name:'丰田凯美瑞', emoji:'🚙', type:'轿车', min:17, max:25, price:'17-25 万', tags:['省心家用','省油'],
+        comment:'B级车保值率天花板。',
+        pros:['混动版省油又平顺','开10年毛病少，省心','二手车商抢着收'],
+        cons:['2.0L纯油动力一般','内饰设计偏老气'],
+        audience:'预算20万左右、要B级车又要保值省心的家用。' },
+      { name:'本田雅阁', emoji:'🚗', type:'轿车', min:17, max:23, price:'17-23 万', tags:['动力强','省心家用'],
+        comment:'1.5T动力强，操控好。',
+        pros:['1.5T动力充沛，超车轻松','操控在B级车里数一数二','空间宽敞，后排舒服'],
+        cons:['高速隔音一般','车机系统反应慢'],
+        audience:'喜欢驾驶、又想要B级车空间和省心的家用。' },
+      { name:'大众迈腾', emoji:'🚘', type:'轿车', min:18, max:25, price:'18-25 万', tags:['大空间','面子品牌'],
+        comment:'德系B级标杆，商务范。',
+        pros:['外观大气，商务场合撑得住','空间大，后排翘腿没问题','底盘高级，高速稳如老狗'],
+        cons:['保养维修比日系贵','双离合低速偶有顿挫'],
+        audience:'有商务需求、要面子和空间的成熟用户。' },
+      { name:'奥迪A4L', emoji:'💎', type:'轿车', min:28, max:36, price:'28-36 万', tags:['面子品牌','动力强'],
+        comment:'BBA入门，品牌价值在线。',
+        pros:['四个圈面子到位','2.0T动力够用，操控不错','终端优惠大，性价比在BBA里高'],
+        cons:['保养维修贵，配件不便宜','低配配置抠门'],
+        audience:'预算30万、想要豪华品牌又不想太张扬的务实派。' },
+      { name:'宝马3系', emoji:'🏁', type:'轿车', min:29, max:40, price:'29-40 万', tags:['面子品牌','动力强'],
+        comment:'操控之王，驾驶者之车。',
+        pros:['操控同级天花板，人车合一','2.0T+8AT黄金组合','品牌运动调性足'],
+        cons:['价格高，落地40万起','后期养护成本高'],
+        audience:'追求驾驶乐趣、预算充足的性能控。' },
+      { name:'特斯拉Model 3', emoji:'⚡', type:'新能源', min:23, max:33, price:'23-33 万', tags:['新能源','动力强'],
+        comment:'电车标杆，智能化领先。',
+        pros:['加速猛，操控像跑车','智能化、OTA升级领先','超充网络完善，长途不慌'],
+        cons:['做工一般，接缝大','没有家充体验打折'],
+        audience:'有家充、追求科技感和加速、城市通勤为主的用户。' },
+      { name:'比亚迪汉DM-i', emoji:'⚡', type:'新能源', min:18, max:25, price:'18-25 万', tags:['新能源','大空间'],
+        comment:'C级插混，性价比炸裂。',
+        pros:['C级尺寸，空间越级','插混省油又能上绿牌','配置豪华感强'],
+        cons:['车身大，停车费劲','品牌高端认可度还在爬坡'],
+        audience:'要大空间、要省油、又想要点豪华感的家庭。' },
+      { name:'理想L7', emoji:'🏠', type:'SUV', min:31, max:38, price:'31-38 万', tags:['新能源','大空间'],
+        comment:'奶爸车，增程无焦虑。',
+        pros:['大五座空间，带娃神器','增程无续航焦虑，能油能电','冰箱彩电大沙发，家用体验满分'],
+        cons:['价格不便宜，落地35万起','车身大，市区开费劲'],
+        audience:'二胎/三胎家庭、长途自驾多、预算充足的奶爸。' },
+      { name:'丰田RAV4', emoji:'🚙', type:'SUV', min:17, max:25, price:'17-25 万', tags:['省心家用','大空间'],
+        comment:'SUV保值王。',
+        pros:['省心耐造，开10年不坏','混动版省油，SUV里少见','保值率高'],
+        cons:['内饰设计朴素','动力佛系'],
+        audience:'想要SUV、追求省心保值、经常郊游的家庭。' },
+      { name:'本田CR-V', emoji:'🚙', type:'SUV', min:17, max:24, price:'17-24 万', tags:['省心家用','大空间'],
+        comment:'家用SUV常青树。',
+        pros:['空间魔术师，后排和后备箱都大','1.5T动力够用，可靠省心','保有量大，维修方便'],
+        cons:['隔音一般','车机老旧'],
+        audience:'要大空间SUV、家用为主、追求可靠的实用派。' },
+      { name:'大众途观L', emoji:'🚙', type:'SUV', min:19, max:27, price:'19-27 万', tags:['大空间','面子品牌'],
+        comment:'德系SUV，空间大。',
+        pros:['空间大，后排翘腿','德系底盘扎实，高速稳','品牌面子足'],
+        cons:['保养贵','低配配置低'],
+        audience:'要合资SUV、看重空间和品牌的家庭。' },
+      { name:'比亚迪宋PLUS', emoji:'⚡', type:'新能源', min:13, max:18, price:'13-18 万', tags:['新能源','大空间'],
+        comment:'SUV插混销量王。',
+        pros:['插混省油，绿牌免购置税','空间大，家用够用','性价比高，销量说明问题'],
+        cons:['高速动力一般','品牌溢价弱'],
+        audience:'预算15万、要SUV又要省油省牌钱的家庭。' },
+      { name:'日产轩逸', emoji:'🛋️', type:'轿车', min:9, max:14, price:'9-14 万', tags:['省心家用','省油'],
+        comment:'舒适大沙发，省油省心。',
+        pros:['座椅像大沙发，舒适性同级第一','省油，养车便宜','保有量大，修起来便宜'],
+        cons:['动力肉，超车要吼','隔音一般'],
+        audience:'纯代步、看重舒适和省钱、不追求动力的家庭。' },
+      { name:'大众速腾', emoji:'🚗', type:'轿车', min:13, max:18, price:'13-18 万', tags:['省心家用','面子品牌'],
+        comment:'A+级轿车标杆。',
+        pros:['A+级空间，比A级大一圈','德系底盘扎实','品牌认可度高'],
+        cons:['1.2T动力肉','双离合低速顿挫'],
+        audience:'预算15万、要合资品牌又要空间和面子的家用。' },
+      { name:'别克昂科威Plus', emoji:'🚙', type:'SUV', min:18, max:24, price:'18-24 万', tags:['大空间','动力强'],
+        comment:'2.0T+9AT，性价比高。',
+        pros:['2.0T+9AT动力组合扎实','空间大，5座7座都有','终端优惠大，性价比高'],
+        cons:['油耗偏高','保值率一般'],
+        audience:'想要合资SUV、看重动力和空间、不介意油耗的家用。' },
+      { name:'哈弗H6', emoji:'🚙', type:'SUV', min:9, max:13, price:'9-13 万', tags:['大空间','省心家用'],
+        comment:'国民SUV，性价比之王。',
+        pros:['性价比炸裂，10万买紧凑SUV','空间大，配置给得足','保有量巨大，维修便宜'],
+        cons:['油耗偏高','品牌溢价弱'],
+        audience:'预算10万出头、要SUV又要大空间配置的务实家庭。' }
+    ];
+
+    var state = { budget:null, tags:[] };
+    var grid = document.getElementById('carGrid');
+    var countEl = document.getElementById('count');
+
+    function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function tagsHtml(tags){
+      return tags.map(function(t){
+        var cls = (t==='新能源') ? 'car-tag t-newenergy' : 'car-tag';
+        return '<span class="'+cls+'">'+t+'</span>';
+      }).join('');
+    }
+
+    function renderCard(car){
+      var pros = car.pros.map(function(p){ return '<li>'+esc(p)+'</li>'; }).join('');
+      var cons = car.cons.map(function(c){ return '<li>'+esc(c)+'</li>'; }).join('');
+      var d = document.createElement('div');
+      d.className = 'car-card';
+      d.innerHTML =
+        '<div class="car-head">'+
+          '<div class="car-emoji">'+car.emoji+'</div>'+
+          '<div>'+
+            '<div class="car-name">'+esc(car.name)+'<span class="car-type">'+car.type+'</span></div>'+
+            '<div class="car-price">'+car.price+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="car-tags">'+tagsHtml(car.tags)+'</div>'+
+        '<div class="car-comment">“'+esc(car.comment)+'”</div>'+
+        '<div class="car-toggle"><span class="arrow">›</span> 展开看优缺点</div>'+
+        '<div class="car-detail"><div class="car-detail-inner">'+
+          '<div class="detail-block detail-pros"><div class="detail-label">优点</div><ul class="detail-list">'+pros+'</ul></div>'+
+          '<div class="detail-block detail-cons"><div class="detail-label">缺点</div><ul class="detail-list">'+cons+'</ul></div>'+
+          '<div class="detail-block detail-audience"><div class="detail-label">适合人群</div><p>'+esc(car.audience)+'</p></div>'+
+        '</div></div>';
+      // 点击卡片展开/收起
+      d.addEventListener('click', function(e){
+        // 避免点标签内链接时误触（本卡无链接，但保险）
+        d.classList.toggle('open');
+      });
+      return d;
+    }
+
+    function matchBudget(car){
+      if(!state.budget) return true;
+      var b = BUDGETS[state.budget];
+      return car.min <= b[1] && car.max >= b[0];
+    }
+    function matchTags(car){
+      if(state.tags.length === 0) return true;
+      return state.tags.every(function(t){ return car.tags.indexOf(t) !== -1; });
+    }
+
+    function render(){
+      grid.innerHTML = '';
+      var matched = CARS.filter(function(c){ return matchBudget(c) && matchTags(c); });
+      countEl.textContent = matched.length;
+      if(matched.length === 0){
+        var empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.innerHTML = '<div class="emoji">🔍</div><p>没找到同时满足这些条件的车</p><p class="sub">条件太苛刻了，去掉一两个标签试试，或者调宽预算。</p>';
+        grid.appendChild(empty);
+        return;
+      }
+      var frag = document.createDocumentFragment();
+      matched.forEach(function(c){ frag.appendChild(renderCard(c)); });
+      grid.appendChild(frag);
+    }
+
+    // 预算：单选切换
+    document.getElementById('budgetRow').addEventListener('click', function(e){
+      var btn = e.target.closest('.chip.budget');
+      if(!btn) return;
+      var b = btn.dataset.b;
+      if(state.budget === b){
+        state.budget = null;
+        btn.classList.remove('active');
+      } else {
+        document.querySelectorAll('#budgetRow .chip.budget').forEach(function(x){ x.classList.remove('active'); });
+        state.budget = b;
+        btn.classList.add('active');
+      }
+      render();
+    });
+
+    // 标签：多选
+    document.getElementById('tagRow').addEventListener('click', function(e){
+      var btn = e.target.closest('.chip[data-t]');
+      if(!btn) return;
+      var t = btn.dataset.t;
+      var i = state.tags.indexOf(t);
+      if(i === -1){ state.tags.push(t); btn.classList.add('active'); }
+      else { state.tags.splice(i,1); btn.classList.remove('active'); }
+      render();
+    });
+
+    // 重置
+    document.getElementById('resetBtn').addEventListener('click', function(){
+      state.budget = null; state.tags = [];
+      document.querySelectorAll('.chip.active').forEach(function(x){ x.classList.remove('active'); });
+      render();
+    });
+
+    render();
+  })();
+  </script>
+<div class="search-overlay" id="searchOverlay" onclick="if(event.target===this)closeSearch()">
+    <div class="search-box">
+      <input type="text" class="search-input" id="searchInput" placeholder="搜索页面内容..." oninput="doSearch(this.value)">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+  </div>
+
+  <script>
+var SEARCH_DATA=[{title:'首页',url:'index.html',kw:'首页 超哥 超车 思维 心智模型 认知 概览'},{title:'八大心智模型',url:'models.html',kw:'模型 经济账本 劝退 需求锚点 时机 短板 面子 马力过剩 油电分层'},{title:'购车流程图',url:'guide.html',kw:'流程 指南 预算 选车 看车 试驾 谈价 合同 验车 提车'},{title:'购车算账器',url:'calculator.html',kw:'算账 计算 折旧 保险 保养 油费 总成本'},{title:'贷款计算器',url:'loan.html',kw:'贷款 月供 利息 首付 计算 金融'},{title:'车型库',url:'database.html',kw:'车型 数据库 筛选 推荐 卡罗拉 思域 凯美瑞 雅阁'},{title:'车型对比',url:'compare.html',kw:'对比 比较 车型 参数 优缺点'},{title:'油电对比',url:'ev-vs-gas.html',kw:'油车 电车 新能源 对比 油费 电费 保值率'},{title:'超哥金句',url:'quotes.html',kw:'金句 名言 买个der 急于掏钱 现金流'},{title:'实战案例',url:'cases.html',kw:'案例 实战 选车 真实 场景'},{title:'投稿故事',url:'stories.html',kw:'故事 投稿 车友 分享 经历'},{title:'购车清单',url:'checklist.html',kw:'清单 检查 提车 验车 注意事项'},{title:'避坑指南',url:'pitfalls.html',kw:'避坑 坑 陷阱 骗局 注意'},{title:'FAQ精选',url:'faq.html',kw:'faq 问答 常见问题 预算 时机 油电 品牌 二手'},{title:'视频精选',url:'videos.html',kw:'视频 劝退 算账 选车 市场分析'},{title:'超哥推荐',url:'recommend.html',kw:'推荐 车型 值得买 性价比'},{title:'购车性格测试',url:'quiz.html',kw:'测试 性格 趣味 理性 面子 冲动'},{title:'超哥在线',url:'chat.html',kw:'在线 聊天 对话 AI 问答'},{title:'留言板',url:'board.html',kw:'留言 评论 车友 讨论'},{title:'超哥画像',url:'about.html',kw:'画像 人物 抖音 博主 超哥超车'}];
+function openSearch(){document.getElementById('searchOverlay').classList.add('open');document.getElementById('searchInput').focus()}
+function closeSearch(){document.getElementById('searchOverlay').classList.remove('open')}
+function doSearch(q){var r=document.getElementById('searchResults');if(!q.trim()){r.innerHTML='';return}var m=SEARCH_DATA.filter(function(d){return(d.title+d.kw).toLowerCase().indexOf(q.toLowerCase())>=0});if(m.length===0){r.innerHTML='<div class="search-no-result">没有找到相关页面</div>';return}r.innerHTML=m.map(function(d){return'<a class="search-result-item" href="'+d.url+'"><div class="sr-title">'+d.title+'</div><div class="sr-kw">'+d.kw+'</div></a>'}).join('')}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSearch()});
+var btt=document.getElementById('backToTop');if(btt){window.addEventListener('scroll',function(){btt.classList.toggle('show',window.scrollY>400)},{passive:true})}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}
+</script>
+
+</body>
+</html>
