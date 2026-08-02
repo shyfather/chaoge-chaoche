@@ -1,7 +1,8 @@
 // ============================================================
-// 超哥超车 · 数字人语音聊天云端服务器 v2.1
+// 超哥超车 · 数字人语音聊天云端服务器 v2.2
 // 协议：OpenAI Realtime 兼容事件 + 自定义 vox.* 事件
-// 管线：VAD → STT (Whisper) → LLM (DeepSeek) → TTS (OpenAI)
+// 管线：VAD → STT (SenseVoice) → LLM (DeepSeek) → TTS (CosyVoice2)
+// 全部通过硅基流动 API 调用，零成本部署
 // 部署：Railway / Render / 任何 Node.js 云平台
 // ============================================================
 "use strict";
@@ -38,18 +39,21 @@ const PERSONAS = {
 6. 不跟风。水军吹得再凶，不好开就是不好开。
 
 回答风格：直接、简短、有力，偶尔带点幽默和自嘲。用口语化的方式表达，像朋友聊天一样。`,
-    voice: "onyx",
+    voice: "FunAudioLLM/CosyVoice2-0.5B:alex",
     hasImage: true,
   },
 };
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+// 硅基流动客户端（用于 STT 语音识别 + TTS 语音合成）
+const siliconflow = new OpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY,
+  baseURL: "https://api.siliconflow.cn/v1",
 });
 
+// DeepSeek LLM 客户端（也通过硅基流动调用）
 const deepseek = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: "https://api.deepseek.com",
+  baseURL: "https://api.siliconflow.cn/v1",
 });
 
 // ============================================================
@@ -244,7 +248,7 @@ async function processAudioPipeline(session) {
   }
 
   try {
-    // ======== Step 1: STT (Whisper) ========
+    // ======== Step 1: STT (SenseVoice) ========
     sendEvent(ws, { type: "vox.status", status: "transcribing" });
 
     const pcmBuffer = audioBuffer.getBuffer();
@@ -254,8 +258,8 @@ async function processAudioPipeline(session) {
     const tmpFile = path.join(os.tmpdir(), `stt_${session.id}_${Date.now()}.wav`);
     fs.writeFileSync(tmpFile, wavBuffer);
 
-    const transcription = await openai.audio.transcriptions.create({
-      model: "whisper-1",
+    const transcription = await siliconflow.audio.transcriptions.create({
+      model: "FunAudioLLM/SenseVoiceSmall",
       file: fs.createReadStream(tmpFile),
       language: "zh",
       response_format: "text",
@@ -283,7 +287,7 @@ async function processAudioPipeline(session) {
     session.abortController = abortController;
 
     const stream = await deepseek.chat.completions.create({
-      model: "deepseek-chat",
+      model: "deepseek-ai/DeepSeek-V3",
       messages: session.conversationHistory,
       stream: true,
       temperature: 0.7,
@@ -324,16 +328,17 @@ async function processAudioPipeline(session) {
       ];
     }
 
-    // ======== Step 3: TTS (OpenAI TTS) ========
+    // ======== Step 3: TTS (CosyVoice2) ========
     sendEvent(ws, { type: "vox.status", status: "speaking" });
     session.isSpeaking = true;
 
     const persona = PERSONAS[session.persona] || PERSONAS.chaoge;
-    const ttsResponse = await openai.audio.speech.create({
-      model: "tts-1",
+    const ttsResponse = await siliconflow.audio.speech.create({
+      model: "FunAudioLLM/CosyVoice2-0.5B",
       voice: persona.voice,
       input: fullResponse,
       response_format: "pcm",
+      sample_rate: 24000,
     });
 
     const audioArrayBuffer = await ttsResponse.arrayBuffer();
@@ -538,5 +543,5 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`🚗 超哥超车 · 数字人服务器已启动`);
   console.log(`   HTTP:    http://0.0.0.0:${PORT}`);
   console.log(`   WebSocket: ws://0.0.0.0:${PORT}/ws`);
-  console.log(`   环境:    OPENAI_KEY=${process.env.OPENAI_API_KEY ? "✓" : "✗"} DEEPSEEK_KEY=${process.env.DEEPSEEK_API_KEY ? "✓" : "✗"}`);
+  console.log(`   环境:    硅基流动API Key=${process.env.DEEPSEEK_API_KEY ? "✓" : "✗"}`);
 });
