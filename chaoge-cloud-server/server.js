@@ -19,7 +19,7 @@ const OpenAI = require("openai");
 // ============================================================
 // 配置
 // ============================================================
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 const SAMPLE_RATE = 16000;
 const VAD_SPEECH_THRESHOLD_MS = 200;
 const VAD_SILENCE_THRESHOLD_MS = 800;
@@ -248,7 +248,7 @@ async function processAudioPipeline(session) {
   }
 
   try {
-    // ======== Step 1: STT (SenseVoice) ========
+    // ======== Step 1: STT (Whisper) ========
     sendEvent(ws, { type: "vox.status", status: "transcribing" });
 
     const pcmBuffer = audioBuffer.getBuffer();
@@ -328,7 +328,7 @@ async function processAudioPipeline(session) {
       ];
     }
 
-    // ======== Step 3: TTS (CosyVoice2) ========
+    // ======== Step 3: TTS (OpenAI TTS) ========
     sendEvent(ws, { type: "vox.status", status: "speaking" });
     session.isSpeaking = true;
 
