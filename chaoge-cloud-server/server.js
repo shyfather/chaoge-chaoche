@@ -17,7 +17,7 @@ const { v4: uuidv4 } = require("uuid");
 const OpenAI = require("openai");
 
 // ============================================================
-// 配置
+// 配置 - 端口强制为3000以匹配Railway的PORT检查
 // ============================================================
 const PORT = 3000;
 const SAMPLE_RATE = 16000;
@@ -248,7 +248,7 @@ async function processAudioPipeline(session) {
   }
 
   try {
-    // ======== Step 1: STT (Whisper) ========
+    // ======== Step 1: STT (SenseVoice) ========
     sendEvent(ws, { type: "vox.status", status: "transcribing" });
 
     const pcmBuffer = audioBuffer.getBuffer();
@@ -328,7 +328,7 @@ async function processAudioPipeline(session) {
       ];
     }
 
-    // ======== Step 3: TTS (OpenAI TTS) ========
+    // ======== Step 3: TTS (CosyVoice2) ========
     sendEvent(ws, { type: "vox.status", status: "speaking" });
     session.isSpeaking = true;
 
