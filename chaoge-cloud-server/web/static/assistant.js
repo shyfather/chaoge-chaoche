@@ -1,5 +1,7 @@
 "use strict";
 const SAMPLE_RATE = 16000;
+
+// WebSocket 地址：优先 URL 参数，默认同源
 const WS_URL = (() => {
   const p = new URLSearchParams(location.search);
   const s = p.get("server");
@@ -7,6 +9,8 @@ const WS_URL = (() => {
   const proto = location.protocol === "https:" ? "wss" : "ws";
   return `${proto}://${location.host}/ws`;
 })();
+
+// DOM 引用
 const els = {
   status: document.getElementById("status"),
   canvas: document.getElementById("avatar-canvas"),
@@ -22,17 +26,43 @@ const els = {
   avatarLabel: document.getElementById("avatar-label"),
   apiIndicator: document.getElementById("api-indicator"),
 };
-let ws = null, mic = null, player = null, personas = [], currentPersona = null, assistantLine = null;
-let isSpeaking = false, isThinking = false, camOn = false, camStream = null;
+
+// 状态
+let ws = null;
+let mic = null;
+let player = null;
+let personas = [];
+let currentPersona = null;
+let assistantLine = null;
+let isSpeaking = false;
+let isThinking = false;
+let camOn = false;
+let camStream = null;
+
+// === Canvas 数字人动画 ===
 const W = 512, H = 512;
 const ctx = els.canvas.getContext("2d", { alpha: false, desynchronized: true });
-ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+ctx.imageSmoothingEnabled = true;
+ctx.imageSmoothingQuality = "high";
+
 const avatarImg = new Image();
-let avatarLoaded = false, blinkState = 0, blinkTimer = 0, mouthOpen = 0, mouthTarget = 0, expression = "neutral", audioEnergy = 0, audioEnergySmooth = 0, animFrame = null;
+let avatarLoaded = false;
+let blinkState = 0, blinkTimer = 0;
+let mouthOpen = 0, mouthTarget = 0;
+let expression = "neutral";
+let audioEnergy = 0, audioEnergySmooth = 0;
+let animFrame = null;
+
 avatarImg.src = "static/avatar.jpg";
 avatarImg.onload = () => { avatarLoaded = true; startAnimLoop(); };
 avatarImg.onerror = () => { avatarLoaded = false; startAnimLoop(); };
-function startAnimLoop() { if (animFrame) return; const loop = () => { animFrame = requestAnimationFrame(loop); drawFrame(); updateAnimState(); }; animFrame = requestAnimationFrame(loop); }
+
+function startAnimLoop() {
+  if (animFrame) return;
+  const loop = () => { animFrame = requestAnimationFrame(loop); drawFrame(); updateAnimState(); };
+  animFrame = requestAnimationFrame(loop);
+}
+
 function updateAnimState() {
   blinkTimer++;
   if (blinkState === 0 && blinkTimer > 180 + Math.random() * 180) { blinkState = 1; blinkTimer = 0; }
@@ -41,8 +71,11 @@ function updateAnimState() {
   audioEnergySmooth += (audioEnergy - audioEnergySmooth) * 0.15;
   mouthTarget = isSpeaking ? Math.min(1, audioEnergySmooth * 2.5 + 0.2) : 0;
   mouthOpen += (mouthTarget - mouthOpen) * 0.2;
-  if (isThinking) expression = "thinking"; else if (isSpeaking) expression = "happy"; else expression = "neutral";
+  if (isThinking) expression = "thinking";
+  else if (isSpeaking) expression = "happy";
+  else expression = "neutral";
 }
+
 function drawFrame() {
   ctx.fillStyle = "#0d1117"; ctx.fillRect(0, 0, W, H);
   if (avatarLoaded && avatarImg.complete && avatarImg.naturalWidth > 0) {
@@ -77,12 +110,16 @@ function drawFrame() {
       ctx.lineTo(cx + eyeSpacing + imgW * 0.04, eyeY - imgH * 0.06);
       ctx.stroke();
     }
-  } else { drawFallbackAvatar(); }
+  } else {
+    drawFallbackAvatar();
+  }
 }
+
 function drawFallbackAvatar() {
   const cx = W / 2, cy = H / 2 - 10;
   ctx.fillStyle = "#d4a574"; ctx.beginPath(); ctx.arc(cx, cy, 200, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#2a2a2a"; ctx.beginPath(); ctx.ellipse(cx, cy - 110, 170, 80, 0, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = "#2a2a2a";
+  ctx.beginPath(); ctx.ellipse(cx, cy - 110, 170, 80, 0, Math.PI, 0); ctx.fill();
   const eyeY = cy - 30, eyeSpacing = 55;
   if (blinkState === 0) {
     ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.ellipse(cx - eyeSpacing, eyeY, 25, 22, 0, Math.PI * 2); ctx.fill();
@@ -97,54 +134,150 @@ function drawFallbackAvatar() {
   }
   if (mouthOpen > 0.05) {
     const mw = 30 + mouthOpen * 20, mh = mouthOpen * 20;
-    ctx.fillStyle = "#1a0a0a"; ctx.beginPath(); ctx.ellipse(cx, cy + 60 + mh * 0.3, mw / 2, mh / 2, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#f0f0f0"; ctx.beginPath(); ctx.ellipse(cx, cy + 60 - mh * 0.15, mw * 0.35, mh * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#1a0a0a";
+    ctx.beginPath(); ctx.ellipse(cx, cy + 60 + mh * 0.3, mw / 2, mh / 2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#f0f0f0";
+    ctx.beginPath(); ctx.ellipse(cx, cy + 60 - mh * 0.15, mw * 0.35, mh * 0.2, 0, 0, Math.PI * 2); ctx.fill();
   }
 }
-function floatTo16BitPCM(float32) { const int16 = new Int16Array(float32.length); for (let i = 0; i < float32.length; i++) { const s = Math.max(-1, Math.min(1, float32[i])); int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff; } return int16; }
-function base64FromInt16(int16) { const bytes = new Uint8Array(int16.buffer); let binary = ""; for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]); return btoa(binary); }
-function int16FromBase64(b64) { const binary = atob(b64); const bytes = new Uint8Array(binary.length); for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i); return new Int16Array(bytes.buffer); }
-function ensurePlayer() { if (!player) { player = { ctx: new AudioContext({ sampleRate: SAMPLE_RATE }), nextStartTime: 0 }; } if (player.ctx.state === "suspended") player.ctx.resume(); return player; }
+
+// === PCM 编解码 ===
+function floatTo16BitPCM(float32) {
+  const int16 = new Int16Array(float32.length);
+  for (let i = 0; i < float32.length; i++) {
+    const s = Math.max(-1, Math.min(1, float32[i]));
+    int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  }
+  return int16;
+}
+
+function base64FromInt16(int16) {
+  const bytes = new Uint8Array(int16.buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+function int16FromBase64(b64) {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Int16Array(bytes.buffer);
+}
+
+// === 音频播放 ===
+function ensurePlayer() {
+  if (!player) {
+    player = { ctx: new AudioContext({ sampleRate: SAMPLE_RATE }), nextStartTime: 0 };
+  }
+  if (player.ctx.state === "suspended") player.ctx.resume();
+  return player;
+}
+
 function playPCM(int16) {
   const p = ensurePlayer();
   const buf = p.ctx.createBuffer(1, int16.length, SAMPLE_RATE);
   const data = buf.getChannelData(0);
   for (let i = 0; i < int16.length; i++) data[i] = int16[i] / 0x8000;
   const src = p.ctx.createBufferSource();
-  src.buffer = buf; src.connect(p.ctx.destination);
+  src.buffer = buf;
+  src.connect(p.ctx.destination);
   const start = Math.max(p.ctx.currentTime + 0.02, p.nextStartTime);
   src.start(start);
   p.nextStartTime = start + buf.duration;
 }
-function flushPlayback() { if (player) { player.ctx.close(); player = null; } }
-const WORKLET_SRC = `class PCMCapture extends AudioWorkletProcessor { process(inputs) { const input = inputs[0]; if (input && input[0] && input[0].length > 0) { this.port.postMessage(input[0].slice(0)); } return true; } } registerProcessor("pcm-capture", PCMCapture);`;
+
+function flushPlayback() {
+  if (player) {
+    player.ctx.close();
+    player = null;
+  }
+}
+
+// === 麦克风 (AudioWorklet) ===
+const WORKLET_SRC = `
+class PCMCapture extends AudioWorkletProcessor {
+  process(inputs) {
+    const input = inputs[0];
+    if (input && input[0] && input[0].length > 0) {
+      this.port.postMessage(input[0].slice(0));
+    }
+    return true;
+  }
+}
+registerProcessor("pcm-capture", PCMCapture);
+`;
+
 async function startMic() {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+  });
   const ctx = new AudioContext({ sampleRate: SAMPLE_RATE });
-  await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET_SRC], { type: "application/javascript" })));
+  await ctx.audioWorklet.addModule(
+    URL.createObjectURL(new Blob([WORKLET_SRC], { type: "application/javascript" }))
+  );
   const source = ctx.createMediaStreamSource(stream);
   const node = new AudioWorkletNode(ctx, "pcm-capture");
-  node.port.onmessage = (e) => { if (ws && ws.readyState === WebSocket.OPEN) { const int16 = floatTo16BitPCM(e.data); ws.send(JSON.stringify({ type: "input_audio_buffer.append", audio: base64FromInt16(int16) })); } };
+  node.port.onmessage = (e) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      const int16 = floatTo16BitPCM(e.data);
+      ws.send(JSON.stringify({ type: "input_audio_buffer.append", audio: base64FromInt16(int16) }));
+    }
+  };
   source.connect(node);
-  const gain = ctx.createGain(); gain.gain.value = 0;
-  node.connect(gain); gain.connect(ctx.destination);
+  const gain = ctx.createGain();
+  gain.gain.value = 0;
+  node.connect(gain);
+  gain.connect(ctx.destination);
   mic = { ctx, stream, node };
 }
-function stopMic() { if (!mic) return; mic.node.disconnect(); mic.stream.getTracks().forEach(t => t.stop()); mic.ctx.close(); mic = null; }
+
+function stopMic() {
+  if (!mic) return;
+  mic.node.disconnect();
+  mic.stream.getTracks().forEach((t) => t.stop());
+  mic.ctx.close();
+  mic = null;
+}
+
+// === 转录区 ===
 function addLine(cls, who, text) {
-  const div = document.createElement("div"); div.className = `line ${cls}`;
-  if (who) { const span = document.createElement("span"); span.className = "who"; span.textContent = who; div.appendChild(span); }
+  const div = document.createElement("div");
+  div.className = `line ${cls}`;
+  if (who) {
+    const span = document.createElement("span");
+    span.className = "who";
+    span.textContent = who;
+    div.appendChild(span);
+  }
   div.appendChild(document.createTextNode(text));
-  els.transcript.appendChild(div); els.transcript.scrollTop = els.transcript.scrollHeight;
+  els.transcript.appendChild(div);
+  els.transcript.scrollTop = els.transcript.scrollHeight;
   return div;
 }
+
 function appendAssistantDelta(delta) {
-  if (!assistantLine) { const name = (personas.find(p => p.id === currentPersona) || {}).name || "助手"; assistantLine = addLine("assistant", `${name}:`, ""); }
+  if (!assistantLine) {
+    const name = (personas.find((p) => p.id === currentPersona) || {}).name || "助手";
+    assistantLine = addLine("assistant", `${name}:`, "");
+  }
   assistantLine.appendChild(document.createTextNode(delta));
   els.transcript.scrollTop = els.transcript.scrollHeight;
 }
-function setStatus(text, cls) { els.status.textContent = text; els.status.className = `status ${cls || ""}`; }
-function setAvatarState(state) { const labels = { idle: "待机中", listening: "聆听中", thinking: "思考中", speaking: "说话中" }; els.avatarState.textContent = labels[state] || state; els.avatarState.className = `avatar-state ${state}`; }
+
+// === 状态 ===
+function setStatus(text, cls) {
+  els.status.textContent = text;
+  els.status.className = `status ${cls || ""}`;
+}
+
+function setAvatarState(state) {
+  const labels = { idle: "待机中", listening: "聆听中", thinking: "思考中", speaking: "说话中" };
+  els.avatarState.textContent = labels[state] || state;
+  els.avatarState.className = `avatar-state ${state}`;
+}
+
+// === 人设 ===
 function updatePersonaBar() {
   els.personaBar.innerHTML = "";
   for (const p of personas) {
@@ -155,46 +288,118 @@ function updatePersonaBar() {
     els.personaBar.appendChild(chip);
   }
 }
-function switchPersona(id) { if (!ws || ws.readyState !== WebSocket.OPEN || id === currentPersona) return; ws.send(JSON.stringify({ type: "vox.persona", persona: id })); currentPersona = id; assistantLine = null; updatePersonaBar(); }
+
+function switchPersona(id) {
+  if (!ws || ws.readyState !== WebSocket.OPEN || id === currentPersona) return;
+  ws.send(JSON.stringify({ type: "vox.persona", persona: id }));
+  currentPersona = id;
+  assistantLine = null;
+  updatePersonaBar();
+}
+
+// === WebSocket 消息处理 ===
 function handleEvent(event) {
   switch (event.type) {
     case "vox.status":
       setStatus(event.status, event.status === "connected" || event.status === "idle" ? "live" : event.status === "error" ? "danger" : "warn");
-      if (event.status === "connected") { currentPersona = event.persona; updatePersonaBar(); }
+      if (event.status === "connected") {
+        currentPersona = event.persona;
+        updatePersonaBar();
+      }
       if (event.status === "connected" || event.status === "idle") setAvatarState("idle");
       else if (event.status === "listening" || event.status === "transcribing") setAvatarState("listening");
       else if (event.status === "thinking") { setAvatarState("thinking"); isThinking = true; }
       else if (event.status === "speaking") { setAvatarState("speaking"); isSpeaking = true; isThinking = false; }
       else if (event.status === "error") setAvatarState("idle");
       break;
-    case "vox.persona": currentPersona = event.persona.id; updatePersonaBar(); break;
-    case "input_audio_buffer.speech_started": flushPlayback(); assistantLine = null; isSpeaking = false; setAvatarState("listening"); break;
-    case "response.output_audio_transcript.delta": if (event.delta) appendAssistantDelta(event.delta); break;
+
+    case "vox.persona":
+      currentPersona = event.persona.id;
+      updatePersonaBar();
+      break;
+
+    case "input_audio_buffer.speech_started":
+      flushPlayback();
+      assistantLine = null;
+      isSpeaking = false;
+      setAvatarState("listening");
+      break;
+
+    case "response.output_audio_transcript.delta":
+      if (event.delta) appendAssistantDelta(event.delta);
+      break;
+
     case "response.output_audio.delta":
       if (event.delta) {
         playPCM(int16FromBase64(event.delta));
-        const samples = int16FromBase64(event.delta); let sum = 0; for (let i = 0; i < samples.length; i++) sum += Math.abs(samples[i]);
+        const samples = int16FromBase64(event.delta);
+        let sum = 0;
+        for (let i = 0; i < samples.length; i++) sum += Math.abs(samples[i]);
         audioEnergy = sum / samples.length / 32768;
       }
       break;
-    case "response.done": assistantLine = null; isSpeaking = false; isThinking = false; audioEnergy = 0; if (!event.interrupted) setAvatarState("idle"); break;
-    case "conversation.item.input_audio_transcription.completed": { const text = (event.transcript || "").trim(); if (text) addLine("user", "你:", text); break; }
-    case "response.cancel": flushPlayback(); assistantLine = null; isSpeaking = false; isThinking = false; audioEnergy = 0; setAvatarState("idle"); break;
+
+    case "response.done":
+      assistantLine = null;
+      isSpeaking = false;
+      isThinking = false;
+      audioEnergy = 0;
+      if (!event.interrupted) setAvatarState("idle");
+      break;
+
+    case "conversation.item.input_audio_transcription.completed": {
+      const text = (event.transcript || "").trim();
+      if (text) addLine("user", "你:", text);
+      break;
+    }
+    case "response.cancel":
+      flushPlayback();
+      assistantLine = null;
+      isSpeaking = false;
+      isThinking = false;
+      audioEnergy = 0;
+      setAvatarState("idle");
+      break;
   }
 }
+
+// === WebSocket 连接 ===
 function connectWS() {
   if (ws) try { ws.close(); } catch (_) {}
-  try { ws = new WebSocket(WS_URL); } catch (_) { setStatus("连接失败", "danger"); if (els.apiIndicator) els.apiIndicator.textContent = "WS · 失败"; setTimeout(connectWS, 3000); return; }
+  try { ws = new WebSocket(WS_URL); } catch (_) {
+    setStatus("连接失败", "danger");
+    if (els.apiIndicator) els.apiIndicator.textContent = "WS · 失败";
+    setTimeout(connectWS, 3000);
+    return;
+  }
   ws.binaryType = "arraybuffer";
   ws.onopen = () => {
-    setStatus("已连接", "live"); if (els.apiIndicator) els.apiIndicator.textContent = "WS · 已连接";
-    els.micBtn.disabled = false; setAvatarState("idle"); addLine("sys", "", "已连接到云端服务器，点击开始对话");
-    const overlay = document.getElementById("overlay"); if (overlay) overlay.classList.add("hidden");
+    setStatus("已连接", "live");
+    if (els.apiIndicator) els.apiIndicator.textContent = "WS · 已连接";
+    els.micBtn.disabled = false;
+    setAvatarState("idle");
+    addLine("sys", "", "已连接到云端服务器，点击开始对话");
+    // 隐藏启动覆层
+    const overlay = document.getElementById("overlay");
+    if (overlay) overlay.classList.add("hidden");
   };
-  ws.onclose = () => { setStatus("已断开", "warn"); els.micBtn.disabled = true; setAvatarState("idle"); if (els.apiIndicator) els.apiIndicator.textContent = "WS · 断开"; setTimeout(connectWS, 3000); };
-  ws.onerror = () => { setStatus("连接错误", "warn"); if (els.apiIndicator) els.apiIndicator.textContent = "WS · 错误"; };
-  ws.onmessage = (msg) => { if (typeof msg.data === "string") handleEvent(JSON.parse(msg.data)); };
+  ws.onclose = () => {
+    setStatus("已断开", "warn");
+    els.micBtn.disabled = true;
+    setAvatarState("idle");
+    if (els.apiIndicator) els.apiIndicator.textContent = "WS · 断开";
+    setTimeout(connectWS, 3000);
+  };
+  ws.onerror = () => {
+    setStatus("连接错误", "warn");
+    if (els.apiIndicator) els.apiIndicator.textContent = "WS · 错误";
+  };
+  ws.onmessage = (msg) => {
+    if (typeof msg.data === "string") handleEvent(JSON.parse(msg.data));
+  };
 }
+
+// === 初始化 ===
 async function init() {
   try {
     const res = await fetch("api/personas");
@@ -209,34 +414,80 @@ async function init() {
   }
   connectWS();
 }
+
+// === 摄像头切换 ===
 async function toggleCam() {
   if (camOn) {
-    camStream.getTracks().forEach(t => t.stop()); camStream = null; camOn = false;
-    els.camToggle.textContent = "📷 摄像头"; els.camToggle.classList.remove("on"); els.camWrap.classList.remove("live"); els.camVideo.srcObject = null;
+    camStream.getTracks().forEach((t) => t.stop());
+    camStream = null;
+    camOn = false;
+    els.camToggle.textContent = "📷 摄像头";
+    els.camToggle.classList.remove("on");
+    els.camWrap.classList.remove("live");
+    els.camVideo.srcObject = null;
     return;
   }
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } } });
-    camStream = stream; camOn = true; els.camVideo.srcObject = stream;
-    els.camToggle.textContent = "📷 关闭摄像头"; els.camToggle.classList.add("on"); els.camWrap.classList.add("live");
-  } catch (e) { addLine("sys", "", `⚠ 摄像头不可用: ${e.message}`); }
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+    });
+    camStream = stream;
+    camOn = true;
+    els.camVideo.srcObject = stream;
+    els.camToggle.textContent = "📷 关闭摄像头";
+    els.camToggle.classList.add("on");
+    els.camWrap.classList.add("live");
+  } catch (e) {
+    addLine("sys", "", `⚠ 摄像头不可用: ${e.message}`);
+  }
 }
+
 els.camToggle.onclick = toggleCam;
+
+// === 键盘快捷键 ===
 document.addEventListener("keydown", (e) => {
-  if (e.key === "m" || e.key === "M") els.micBtn.click();
-  else if (e.key === "c" || e.key === "C") els.camToggle.click();
-  else if (e.key === "Escape" && mic) { stopMic(); els.micBtn.textContent = "🎙 开始对话"; els.micBtn.classList.remove("live"); setStatus("已连接", "live"); setAvatarState("idle"); }
+  if (e.key === "m" || e.key === "M") {
+    els.micBtn.click();
+  } else if (e.key === "c" || e.key === "C") {
+    els.camToggle.click();
+  } else if (e.key === "Escape" && mic) {
+    stopMic();
+    els.micBtn.textContent = "🎙 开始对话";
+    els.micBtn.classList.remove("live");
+    setStatus("已连接", "live");
+    setAvatarState("idle");
+  }
 });
+
+// === 麦克风按钮 ===
 els.micBtn.onclick = async () => {
-  if (mic) { stopMic(); els.micBtn.textContent = "🎙 开始对话"; els.micBtn.classList.remove("live"); setStatus("已连接", "live"); setAvatarState("idle"); return; }
+  if (mic) {
+    stopMic();
+    els.micBtn.textContent = "🎙 开始对话";
+    els.micBtn.classList.remove("live");
+    setStatus("已连接", "live");
+    setAvatarState("idle");
+    return;
+  }
   try {
     await startMic();
-    els.micBtn.textContent = "■ 结束对话"; els.micBtn.classList.add("live");
-    setStatus("聆听中", "live"); setAvatarState("listening");
-  } catch (e) { addLine("sys", "", `⚠ 麦克风不可用: ${e.message}`); }
+    els.micBtn.textContent = "■ 结束对话";
+    els.micBtn.classList.add("live");
+    setStatus("聆听中", "live");
+    setAvatarState("listening");
+  } catch (e) {
+    addLine("sys", "", `⚠ 麦克风不可用: ${e.message}`);
+  }
 };
+
+// 启动覆盖层按钮
 document.addEventListener("DOMContentLoaded", () => {
   const startBtn = document.getElementById("start-btn");
-  if (startBtn) { startBtn.textContent = "连接中..."; startBtn.disabled = true; }
+  if (startBtn) {
+    // 连接成功后自动隐藏
+    startBtn.textContent = "连接中...";
+    startBtn.disabled = true;
+  }
 });
+
 init();
