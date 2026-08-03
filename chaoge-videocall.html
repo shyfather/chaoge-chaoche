@@ -128,8 +128,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang 
 <script>
 "use strict";
 // ============================================================
-// 超哥超车 · AI视频通话 v5.0
+// 超哥超车 · AI视频通话 v5.1
 // 真人视频通话体验：实时语音 + 文字输入 + 数字人动画
+// 修复：avatar状态class优先级bug
 // ============================================================
 
 const SAMPLE_RATE = 16000;
@@ -413,7 +414,7 @@ function updateConnStatus(state, text) {
 function setAvatarState(state) {
   const labels = { idle: "待机中", listening: "聆听中...", thinking: "思考中...", speaking: "说话中...", error: "出错了" };
   els.avatarState.textContent = labels[state] || "待机中";
-  const cls = state === "speaking" || state === "listening" ? "active" :
+  const cls = state === "speaking" ? "active" :
               state === "listening" ? "listening" : state === "thinking" ? "thinking" : "";
   els.avatarPanel.className = "avatar-panel " + cls;
 }
