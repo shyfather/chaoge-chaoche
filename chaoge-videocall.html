@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>超哥超车 · AI视频通话</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a0f;--panel:#12121a;--border:#1e1e30;--text:#e8e8f0;--muted:#6b6b80;--accent:#e94560;--accent2:#ff6b81;--live:#3fb950;--warn:#d29922;--danger:#f85149}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Noto Sans CJK SC",sans-serif;min-height:100vh;display:flex;justify-content:center;overflow-x:hidden}
+.stage{width:min(1000px,100vw);padding:10px 14px;display:flex;flex-direction:column;gap:8px;min-height:100vh}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.topbar h1{font-size:18px;color:var(--accent);letter-spacing:-0.5px}
+.topbar .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0}
+.topbar .dot.on{background:var(--live);box-shadow:0 0 8px var(--live);animation:pulse 2s infinite}
+.topbar .dot.warn{background:var(--warn)}
+.topbar .dot.off{background:var(--danger)}
+.topbar .status-text{font-size:12px;color:var(--muted)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+.call-view{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1}
+@media(max-width:720px){.call-view{grid-template-columns:1fr}}
+.cam-panel,.avatar-panel{position:relative;width:100%;aspect-ratio:1;background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:border-color .4s,box-shadow .4s}
+.avatar-panel.active{border-color:var(--accent);box-shadow:0 0 24px rgba(233,69,96,.25)}
+.avatar-panel.listening{border-color:var(--live);box-shadow:0 0 24px rgba(63,185,80,.25)}
+.avatar-panel.thinking{border-color:var(--warn);box-shadow:0 0 24px rgba(210,153,34,.25)}
+.cam-panel video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.avatar-panel canvas{position:absolute;inset:0;width:100%;height:100%}
+.panel-label{position:absolute;top:10px;left:10px;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:600;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);z-index:2;letter-spacing:.5px}
+.avatar-status{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);padding:4px 16px;border-radius:999px;font-size:11px;background:rgba(0,0,0,.7);backdrop-filter:blur(10px);z-index:2;white-space:nowrap}
+.cam-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted);flex-direction:column;gap:6px}
+.cam-fallback svg{opacity:.3}
+.hidden{display:none!important}
+
+.transcript-area{flex:1;min-height:80px;max-height:160px;overflow-y:auto;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.8}
+.transcript-area::-webkit-scrollbar{width:3px}
+.transcript-area::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.transcript-area .line{margin-bottom:4px;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+.transcript-area .who{font-weight:600;margin-right:5px}
+.transcript-area .user .who{color:var(--accent)}
+.transcript-area .assistant .who{color:var(--live)}
+.transcript-area .sys{color:var(--muted);font-size:11px;text-align:center}
+
+.controls{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;padding:4px 0}
+.btn{padding:10px 22px;font-size:14px;border-radius:999px;border:none;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover:not(:disabled){transform:scale(1.03);box-shadow:0 4px 16px rgba(233,69,96,.3)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary.live{background:var(--live);animation:micPulse 2s infinite}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(63,185,80,.4)}50%{box-shadow:0 0 0 10px rgba(63,185,80,0)}}
+.btn-outline{padding:10px 18px;background:transparent;border:1px solid var(--border);color:var(--text);font-size:13px}
+.btn-outline:hover{border-color:var(--accent)}
+.btn-outline.live{border-color:var(--live);color:var(--live)}
+.btn-danger{background:var(--danger);color:#fff}
+.hint{font-size:11px;color:var(--muted);text-align:center;padding-bottom:6px}
+.hint kbd{display:inline-block;padding:1px 6px;border-radius:4px;border:1px solid var(--border);font-size:10px;margin:0 2px;background:var(--panel)}
+
+.text-input-row{display:flex;gap:8px;padding:0}
+.text-input-row input{flex:1;padding:10px 14px;border-radius:999px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:13px;font-family:inherit;outline:none}
+.text-input-row input:focus{border-color:var(--accent)}
+.text-input-row button{padding:10px 18px;border-radius:999px;border:none;background:var(--accent);color:#fff;font-weight:600;cursor:pointer;font-size:13px;white-space:nowrap}
+
+.overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100}
+.overlay .logo{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));margin-bottom:16px;display:flex;align-items:center;justify-content:center;font-size:40px;color:#fff;font-weight:bold;box-shadow:0 8px 32px rgba(233,69,96,.3)}
+.overlay h2{color:var(--accent);font-size:26px;margin-bottom:4px}
+.overlay p{color:var(--muted);font-size:13px;margin-bottom:20px}
+.overlay .btn{font-size:16px;padding:14px 48px}
+.overlay .error-msg{color:var(--danger);font-size:12px;margin-top:10px;max-width:300px;text-align:center}
+.overlay .retry-link{color:var(--accent);cursor:pointer;font-size:12px;margin-top:6px;text-decoration:underline}
+</style>
+</head>
+<body>
+
+<div id="overlay" class="overlay">
+  <div class="logo">超</div>
+  <h2>超哥超车</h2>
+  <p>AI 实时视频通话</p>
+  <button id="start-btn" class="btn btn-primary" disabled>连接中...</button>
+  <div id="conn-error" class="error-msg hidden"></div>
+  <span id="retry-link" class="retry-link hidden" onclick="retryConnection()">点击重试</span>
+</div>
+
+<main class="stage">
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1>超哥超车</h1>
+      <span class="dot off" id="conn-dot"></span>
+      <span class="status-text" id="status-text">未连接</span>
+    </div>
+  </header>
+
+  <section class="call-view">
+    <div class="cam-panel" id="cam-panel">
+      <video id="user-cam" autoplay muted playsinline class="hidden"></video>
+      <div id="cam-fallback" class="cam-fallback">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="16" rx="2"/><path d="M22 7l-6 4.5v-5L22 7z"/></svg>
+        摄像头未开启
+      </div>
+      <span class="panel-label">你</span>
+    </div>
+    <div class="avatar-panel" id="avatar-panel">
+      <canvas id="avatar-canvas" width="512" height="512"></canvas>
+      <span class="panel-label">超哥</span>
+      <span class="avatar-status" id="avatar-state">待机中</span>
+    </div>
+  </section>
+
+  <div class="transcript-area" id="transcript" aria-live="polite">
+    <div class="line sys">说句话跟超哥唠嗑吧！也可以打字聊天</div>
+  </div>
+
+  <div class="text-input-row">
+    <input type="text" id="text-input" placeholder="打字跟超哥聊天..." disabled />
+    <button id="send-text-btn" class="btn btn-primary" disabled>发送</button>
+  </div>
+
+  <footer class="controls">
+    <button id="cam-toggle" class="btn btn-outline">摄像头</button>
+    <button id="mic-btn" class="btn btn-primary" disabled>开始对话</button>
+    <button id="hangup-btn" class="btn btn-danger hidden">挂断</button>
+  </footer>
+  <p class="hint">按 <kbd>M</kbd> 静音 · <kbd>Esc</kbd> 挂断 · 或直接打字聊天</p>
+</main>
+
+<script>
+"use strict";
+// ============================================================
+// 超哥超车 · AI视频通话 v5.0
+// 真人视频通话体验：实时语音 + 文字输入 + 数字人动画
+// ============================================================
+
+const SAMPLE_RATE = 16000;
+const WS_URL = "wss://chaoge-chaoche-production.up.railway.app/ws";
+const CONNECT_TIMEOUT = 8000;
+
+// DOM
+const $ = id => document.getElementById(id);
+const els = {
+  overlay: $("overlay"), startBtn: $("start-btn"), connError: $("conn-error"),
+  retryLink: $("retry-link"), connDot: $("conn-dot"), statusText: $("status-text"),
+  avatarPanel: $("avatar-panel"), avatarState: $("avatar-state"),
+  canvas: $("avatar-canvas"), micBtn: $("mic-btn"), hangupBtn: $("hangup-btn"),
+  camToggle: $("cam-toggle"), userCam: $("user-cam"), camFallback: $("cam-fallback"),
+  transcript: $("transcript"), textInput: $("text-input"), sendTextBtn: $("send-text-btn"),
+};
+
+// State
+let ws = null, sessionId = null, isConnected = false, isMuted = true;
+let isSpeaking = false, isThinking = false, isListening = false;
+let audioCtx = null, micStream = null, scriptNode = null;
+let audioQueue = [], isPlayingAudio = false, nextPlayTime = 0;
+let playbackCtx = null, reconnectTimer = null, connectTimer = null;
+let mediaStream = null, assistantMsgEl = null;
+
+// Canvas
+const ctx = els.canvas.getContext("2d");
+let animFrame = null, time = 0;
+let blinkCycle = 0, blinkState = 0;
+let mouthOpen = 0, mouthTarget = 0;
+let eyeLookX = 0, eyeLookY = 0;
+
+// ============================================================
+// Connection
+// ============================================================
+function connectWS() {
+  if (ws && ws.readyState === WebSocket.OPEN) return;
+  updateConnStatus("connecting", "连接中...");
+  
+  connectTimer = setTimeout(() => {
+    if (!isConnected) {
+      updateConnStatus("error", "连接超时");
+      showConnError("连接服务器超时，请检查网络后重试");
+    }
+  }, CONNECT_TIMEOUT);
+
+  try { ws = new WebSocket(WS_URL); }
+  catch(e) { updateConnStatus("error", "连接失败"); showConnError("无法创建连接: " + e.message); return; }
+
+  ws.onopen = () => {
+    clearTimeout(connectTimer);
+    isConnected = true;
+    updateConnStatus("connected", "已连接");
+    els.startBtn.disabled = false;
+    els.startBtn.textContent = "开始通话";
+    els.textInput.disabled = false;
+    els.sendTextBtn.disabled = false;
+    hideConnError();
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  };
+
+  ws.onmessage = (event) => {
+    try { handleMessage(JSON.parse(event.data)); }
+    catch(e) { /* binary data */ }
+  };
+
+  ws.onerror = () => {
+    clearTimeout(connectTimer);
+    if (!isConnected) {
+      updateConnStatus("error", "连接失败");
+      showConnError("无法连接到服务器，请检查网络");
+    }
+  };
+
+  ws.onclose = () => {
+    isConnected = false;
+    if (!isMuted) updateConnStatus("disconnected", "已断开");
+    else updateConnStatus("disconnected", "未连接");
+    scheduleReconnect();
+  };
+}
+
+function scheduleReconnect() {
+  if (reconnectTimer) return;
+  updateConnStatus("connecting", "重连中...");
+  reconnectTimer = setTimeout(() => { reconnectTimer = null; connectWS(); }, 3000);
+}
+
+function retryConnection() {
+  hideConnError();
+  els.startBtn.textContent = "连接中...";
+  els.startBtn.disabled = true;
+  if (ws) { try { ws.close(); } catch(e) {} }
+  connectWS();
+}
+
+function showConnError(msg) {
+  els.connError.textContent = msg;
+  els.connError.classList.remove("hidden");
+  els.retryLink.classList.remove("hidden");
+  els.startBtn.textContent = "连接失败";
+  els.startBtn.disabled = true;
+}
+
+function hideConnError() {
+  els.connError.classList.add("hidden");
+  els.retryLink.classList.add("hidden");
+}
+
+function sendMsg(data) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(data));
+}
+
+function sendAudio(b64) {
+  if (ws && ws.readyState === WebSocket.OPEN && !isMuted)
+    sendMsg({ type: "input_audio_buffer.append", audio: b64 });
+}
+
+// ============================================================
+// Message handling
+// ============================================================
+function handleMessage(msg) {
+  switch (msg.type) {
+    case "vox.status":
+      sessionId = msg.sessionId;
+      const s = msg.status;
+      if (s === "connected") { setAvatarState("idle"); }
+      else if (s === "transcribing") { isThinking = false; setAvatarState("listening"); updateConnStatus("listening", "识别中..."); }
+      else if (s === "thinking") { isThinking = true; setAvatarState("thinking"); updateConnStatus("thinking", "思考中..."); }
+      else if (s === "speaking") { isSpeaking = true; isThinking = false; setAvatarState("speaking"); updateConnStatus("speaking", "说话中..."); }
+      break;
+    case "conversation.item.input_audio_transcription.completed":
+      if (msg.transcript) addTranscript("user", msg.transcript);
+      break;
+    case "response.output_audio_transcript.delta":
+      if (msg.delta) updateAssistantMsg(msg.delta);
+      break;
+    case "response.output_audio.delta":
+      if (msg.delta) playAudioChunk(msg.delta);
+      break;
+    case "response.done":
+      isSpeaking = false; finalizeAssistantMsg();
+      setAvatarState("idle"); updateConnStatus("connected", "已连接");
+      if (isListening) setAvatarState("listening");
+      break;
+    case "input_audio_buffer.speech_started":
+      stopAllAudio(); isSpeaking = false; setAvatarState("listening");
+      break;
+    case "text_response":
+      isThinking = false;
+      if (msg.text) { updateAssistantMsg(msg.text); finalizeAssistantMsg(); }
+      if (msg.audio) playAudioChunk(msg.audio);
+      setAvatarState("idle"); updateConnStatus("connected", "已连接");
+      break;
+    case "error":
+      addTranscript("sys", "⚠️ " + (msg.error?.message || "出错了"));
+      break;
+  }
+}
+
+// ============================================================
+// Audio playback
+// ============================================================
+function playAudioChunk(b64) {
+  audioQueue.push(b64);
+  if (!isPlayingAudio) processAudioQueue();
+}
+
+function processAudioQueue() {
+  if (audioQueue.length === 0) { isPlayingAudio = false; return; }
+  isPlayingAudio = true;
+  const b64 = audioQueue.shift();
+  try {
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const int16 = new Int16Array(bytes.buffer);
+    if (!playbackCtx) playbackCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE });
+    const float32 = new Float32Array(int16.length);
+    for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768;
+    const buf = playbackCtx.createBuffer(1, float32.length, SAMPLE_RATE);
+    buf.getChannelData(0).set(float32);
+    const source = playbackCtx.createBufferSource();
+    source.buffer = buf;
+    source.connect(playbackCtx.destination);
+    nextPlayTime = Math.max(playbackCtx.currentTime, nextPlayTime);
+    source.start(nextPlayTime);
+    nextPlayTime += buf.duration;
+    source.onended = () => processAudioQueue();
+  } catch(e) { processAudioQueue(); }
+}
+
+function stopAllAudio() {
+  audioQueue = []; isPlayingAudio = false; nextPlayTime = 0;
+  if (playbackCtx) { playbackCtx.close().catch(()=>{}); playbackCtx = null; }
+}
+
+// ============================================================
+// Microphone
+// ============================================================
+async function startMic() {
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ 
+      audio: { sampleRate: SAMPLE_RATE, channelCount: 1, echoCancellation: true, noiseSuppression: true } 
+    });
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE });
+    const source = audioCtx.createMediaStreamSource(micStream);
+    scriptNode = audioCtx.createScriptProcessor(4096, 1, 1);
+    scriptNode.onaudioprocess = (event) => {
+      if (!isConnected || isMuted) return;
+      const input = event.inputBuffer.getChannelData(0);
+      const int16 = new Int16Array(input.length);
+      for (let i = 0; i < input.length; i++)
+        int16[i] = Math.max(-32768, Math.min(32767, Math.round(input[i] * 32767)));
+      const bytes = new Uint8Array(int16.buffer);
+      let b64 = "";
+      for (let i = 0; i < bytes.length; i++) b64 += String.fromCharCode(bytes[i]);
+      sendAudio(btoa(b64));
+    };
+    source.connect(scriptNode);
+    scriptNode.connect(audioCtx.destination);
+    return true;
+  } catch(e) {
+    addTranscript("sys", "⚠️ 无法访问麦克风: " + e.message);
+    return false;
+  }
+}
+
+function stopMic() {
+  if (scriptNode) { scriptNode.disconnect(); scriptNode = null; }
+  if (audioCtx) { audioCtx.close().catch(()=>{}); audioCtx = null; }
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+}
+
+// ============================================================
+// Camera
+// ============================================================
+async function toggleCam() {
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => t.stop());
+    mediaStream = null;
+    els.userCam.srcObject = null;
+    els.userCam.classList.add("hidden");
+    els.camFallback.classList.remove("hidden");
+    els.camToggle.classList.remove("live");
+    els.camToggle.textContent = "摄像头";
+    return;
+  }
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 640, facingMode: "user" } });
+    els.userCam.srcObject = mediaStream;
+    els.userCam.classList.remove("hidden");
+    els.camFallback.classList.add("hidden");
+    els.camToggle.classList.add("live");
+    els.camToggle.textContent = "摄像头 · 开";
+  } catch(e) { addTranscript("sys", "摄像头不可用"); }
+}
+
+// ============================================================
+// Text input
+// ============================================================
+function sendText() {
+  const text = els.textInput.value.trim();
+  if (!text || !isConnected) return;
+  addTranscript("user", text);
+  els.textInput.value = "";
+  sendMsg({ type: "text_input", text: text });
+  setAvatarState("thinking");
+  isThinking = true;
+  updateConnStatus("thinking", "思考中...");
+}
+
+// ============================================================
+// UI
+// ============================================================
+function updateConnStatus(state, text) {
+  const dotClass = state === "connected" || state === "listening" ? "on" : 
+                   state === "thinking" || state === "speaking" ? "warn" : "off";
+  els.connDot.className = "dot " + dotClass;
+  els.statusText.textContent = text;
+}
+
+function setAvatarState(state) {
+  const labels = { idle: "待机中", listening: "聆听中...", thinking: "思考中...", speaking: "说话中...", error: "出错了" };
+  els.avatarState.textContent = labels[state] || "待机中";
+  const cls = state === "speaking" || state === "listening" ? "active" :
+              state === "listening" ? "listening" : state === "thinking" ? "thinking" : "";
+  els.avatarPanel.className = "avatar-panel " + cls;
+}
+
+function addTranscript(who, text) {
+  const line = document.createElement("div");
+  line.className = "line " + who;
+  if (who === "user") line.innerHTML = '<span class="who">你：</span>' + escHtml(text);
+  else if (who === "assistant") line.innerHTML = '<span class="who">超哥：</span>' + escHtml(text);
+  else line.innerHTML = text;
+  els.transcript.appendChild(line);
+  els.transcript.scrollTop = els.transcript.scrollHeight;
+  assistantMsgEl = null;
+}
+
+function updateAssistantMsg(delta) {
+  if (!assistantMsgEl) {
+    assistantMsgEl = document.createElement("div");
+    assistantMsgEl.className = "line assistant";
+    assistantMsgEl.innerHTML = '<span class="who">超哥：</span><span class="content"></span>';
+    els.transcript.appendChild(assistantMsgEl);
+  }
+  assistantMsgEl.querySelector(".content").textContent += delta;
+  els.transcript.scrollTop = els.transcript.scrollHeight;
+}
+
+function finalizeAssistantMsg() { assistantMsgEl = null; }
+
+function escHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ============================================================
+// Actions
+// ============================================================
+async function startSession() {
+  els.overlay.classList.add("hidden");
+  const micOk = await startMic();
+  if (!micOk) {
+    addTranscript("sys", "麦克风不可用，可以使用下方文字输入聊天");
+    updateConnStatus("connected", "已连接（文字模式）");
+  }
+  isMuted = false;
+  isListening = true;
+  els.micBtn.disabled = false;
+  els.micBtn.textContent = "对话中";
+  els.micBtn.classList.add("live");
+  els.hangupBtn.classList.remove("hidden");
+  updateConnStatus("listening", "聆听中...");
+  setAvatarState("listening");
+}
+
+function stopSession() {
+  stopMic();
+  stopAllAudio();
+  isMuted = true;
+  isListening = false;
+  els.micBtn.textContent = "开始对话";
+  els.micBtn.classList.remove("live");
+  els.hangupBtn.classList.add("hidden");
+  updateConnStatus("connected", "已挂断");
+  setAvatarState("idle");
+}
+
+function toggleMute() {
+  isMuted = !isMuted;
+  if (isMuted) {
+    els.micBtn.textContent = "已静音";
+    els.micBtn.classList.remove("live");
+    updateConnStatus("connected", "已静音");
+    setAvatarState("idle");
+    isListening = false;
+  } else {
+    els.micBtn.textContent = "对话中";
+    els.micBtn.classList.add("live");
+    updateConnStatus("listening", "聆听中...");
+    setAvatarState("listening");
+    isListening = true;
+  }
+}
+
+// ============================================================
+// Canvas Animation - 真人级数字人
+// ============================================================
+function drawAvatar() {
+  const W = 512, H = 512;
+  ctx.clearRect(0, 0, W, H);
+  
+  // Background gradient
+  const bg = ctx.createRadialGradient(W/2, H/2, 50, W/2, H/2, 400);
+  bg.addColorStop(0, "#1e1e30");
+  bg.addColorStop(1, "#0a0a14");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  
+  time += 0.016;
+  const hx = W/2 + Math.sin(time * 0.7) * 3;
+  const hy = H/2 - 30 + Math.sin(time * 0.5) * 2;
+  
+  // Blink
+  blinkCycle++;
+  if (blinkState === 0 && blinkCycle > 150 + Math.random() * 200) { blinkState = 1; blinkCycle = 0; }
+  if (blinkState === 1 && blinkCycle > 3) { blinkState = 2; blinkCycle = 0; }
+  if (blinkState === 2 && blinkCycle > 5) { blinkState = 3; blinkCycle = 0; }
+  if (blinkState === 3 && blinkCycle > 2) { blinkState = 0; blinkCycle = 0; }
+  
+  mouthTarget = isSpeaking ? 0.3 + Math.random() * 0.5 : 0;
+  mouthOpen += (mouthTarget - mouthOpen) * 0.18;
+  const blinkR = blinkState === 0 ? 0 : blinkState === 1 ? 0.5 : blinkState === 2 ? 1 : 0.5;
+  
+  // Eye look (smooth random movement)
+  eyeLookX += (Math.sin(time * 1.3) * 3 - eyeLookX) * 0.02;
+  eyeLookY += (Math.cos(time * 1.7) * 2 - eyeLookY) * 0.02;
+  
+  // Neck/shoulders
+  ctx.fillStyle = "#1a1a28";
+  ctx.beginPath();
+  ctx.moveTo(hx - 60, H);
+  ctx.quadraticCurveTo(hx - 50, hy + 110, hx - 20, hy + 90);
+  ctx.lineTo(hx + 20, hy + 90);
+  ctx.quadraticCurveTo(hx + 50, hy + 110, hx + 60, H);
+  ctx.fill();
+  
+  // Ears
+  ctx.fillStyle = "#2a2a3a";
+  ctx.beginPath(); ctx.ellipse(hx - 108, hy, 16, 26, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(hx + 108, hy, 16, 26, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#1e1e2e";
+  ctx.beginPath(); ctx.ellipse(hx - 108, hy, 10, 18, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(hx + 108, hy, 10, 18, 0, 0, Math.PI * 2); ctx.fill();
+  
+  // Face gradient
+  const faceGrad = ctx.createRadialGradient(hx - 20, hy - 20, 20, hx, hy, 130);
+  faceGrad.addColorStop(0, "#3d3d52");
+  faceGrad.addColorStop(1, "#252535");
+  ctx.fillStyle = faceGrad;
+  ctx.beginPath(); ctx.ellipse(hx, hy, 108, 128, 0, 0, Math.PI * 2); ctx.fill();
+  
+  // Hair
+  ctx.fillStyle = "#0d0d1a";
+  ctx.beginPath(); ctx.ellipse(hx, hy - 25, 112, 70, 0, Math.PI, Math.PI * 2); ctx.fill();
+  ctx.fillRect(hx - 112, hy - 95, 224, 30);
+  ctx.beginPath(); ctx.ellipse(hx - 100, hy - 40, 22, 50, -0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(hx + 100, hy - 40, 22, 50, 0.2, 0, Math.PI * 2); ctx.fill();
+  
+  // Eyebrows
+  const by = hy - 32;
+  ctx.strokeStyle = "#0d0d1a"; ctx.lineWidth = 5; ctx.lineCap = "round";
+  if (isThinking) {
+    ctx.beginPath(); ctx.moveTo(hx - 42, by - 8); ctx.lineTo(hx - 14, by - 3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(hx + 14, by - 3); ctx.lineTo(hx + 42, by - 8); ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.moveTo(hx - 42, by); ctx.lineTo(hx - 14, by - 3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(hx + 14, by - 3); ctx.lineTo(hx + 42, by); ctx.stroke();
+  }
+  
+  // Eyes
+  const ey = hy - 5;
+  const eyeW = 18, eyeH = 12 + blinkR * 8;
+  ctx.fillStyle = "#f0f0f5";
+  ctx.beginPath(); ctx.ellipse(hx - 30, ey, eyeW, eyeH, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(hx + 30, ey, eyeW, eyeH, 0, 0, Math.PI * 2); ctx.fill();
+  
+  if (blinkR < 1) {
+    ctx.fillStyle = "#3a2810";
+    ctx.beginPath(); ctx.arc(hx - 30 + eyeLookX, ey + eyeLookY, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(hx + 30 + eyeLookX, ey + eyeLookY, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#0d1117";
+    ctx.beginPath(); ctx.arc(hx - 30 + eyeLookX, ey + eyeLookY, 4.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(hx + 30 + eyeLookX, ey + eyeLookY, 4.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(hx - 27 + eyeLookX, ey - 3 + eyeLookY, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(hx + 33 + eyeLookX, ey - 3 + eyeLookY, 2.5, 0, Math.PI * 2); ctx.fill();
+  }
+  
+  // Nose
+  ctx.strokeStyle = "#1a1a28"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(hx, ey + 15); ctx.quadraticCurveTo(hx - 5, ey + 28, hx, ey + 33); ctx.stroke();
+  ctx.fillStyle = "#1a1a28";
+  ctx.beginPath(); ctx.ellipse(hx - 6, ey + 34, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(hx + 6, ey + 34, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
+  
+  // Mouth
+  const my = hy + 50;
+  if (isSpeaking && mouthOpen > 0.05) {
+    ctx.fillStyle = "#0d0d1a";
+    ctx.beginPath(); ctx.ellipse(hx, my, 20, 6 + mouthOpen * 28, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#d94a5a";
+    ctx.beginPath(); ctx.ellipse(hx, my + mouthOpen * 12, 10, 2 + mouthOpen * 6, 0, 0, Math.PI); ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.ellipse(hx, my - 2 - mouthOpen * 8, 16, 2 + mouthOpen * 2, 0, Math.PI, 0); ctx.fill();
+  } else {
+    ctx.strokeStyle = "#1a1a28"; ctx.lineWidth = 2.5; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.arc(hx, my, 18, 0.15, Math.PI - 0.15); ctx.stroke();
+  }
+  
+  if (isSpeaking) {
+    ctx.fillStyle = "rgba(233,69,96,0.08)";
+    ctx.beginPath(); ctx.ellipse(hx - 55, hy + 15, 18, 12, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(hx + 55, hy + 15, 18, 12, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  
+  animFrame = requestAnimationFrame(drawAvatar);
+}
+
+function startAnimLoop() {
+  if (!animFrame) animFrame = requestAnimationFrame(drawAvatar);
+}
+
+// ============================================================
+// Events
+// ============================================================
+els.startBtn.addEventListener("click", startSession);
+els.micBtn.addEventListener("click", toggleMute);
+els.hangupBtn.addEventListener("click", stopSession);
+els.camToggle.addEventListener("click", toggleCam);
+els.sendTextBtn.addEventListener("click", sendText);
+els.textInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); sendText(); }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.target === els.textInput) return;
+  if (e.key === "m" || e.key === "M") { e.preventDefault(); toggleMute(); }
+  if (e.key === "Escape") { e.preventDefault(); stopSession(); }
+});
+
+// ============================================================
+// Init
+// ============================================================
+connectWS();
+startAnimLoop();
+</script>
+</body>
+</html>
