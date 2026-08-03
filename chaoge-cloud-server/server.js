@@ -1,9 +1,6 @@
 // ============================================================
-// 超哥超车 · 数字人语音聊天云端服务器 v3.2
-// 协议：OpenAI Realtime 兼容事件 + 自定义 vox.* 事件
-// 管线：语音(VAD→STT→LLM→TTS) + 文字(LLM→TTS)
-// 全部通过硅基流动 API 调用，零成本部署
-// 部署：Railway / Render / 任何 Node.js 云平台
+// 超哥超车 · 数字人语音聊天云端服务器 v3.3
+// 修复：简化WebSocket消息处理，使用addEventListener
 // ============================================================
 "use strict";
 require("dotenv").config();
@@ -206,7 +203,7 @@ function pcmToWav(pcmBuffer, sampleRate) {
 
 function sendEvent(ws, event) {
   try {
-    if (ws && ws.readyState === 1) { // 1 = WebSocket.OPEN
+    if (ws && ws.readyState === 1) {
       ws.send(JSON.stringify(event));
     }
   } catch (e) {
@@ -227,7 +224,7 @@ function downsamplePCM(input, fromRate, toRate) {
 }
 
 // ============================================================
-// LLM 调用（非流式，更可靠）
+// LLM 调用
 // ============================================================
 async function callLLM(messages, abortSignal) {
   const response = await ai.chat.completions.create({
@@ -278,11 +275,10 @@ async function callSTT(pcmBuffer, sessionId) {
 // 发送音频分片
 // ============================================================
 function sendAudioChunks(ws, pcm16k) {
-  const chunkSize = Math.floor(SAMPLE_RATE * 0.1); // 100ms per chunk
+  const chunkSize = Math.floor(SAMPLE_RATE * 0.1);
   for (let i = 0; i < pcm16k.length; i += chunkSize) {
     const end = Math.min(i + chunkSize, pcm16k.length);
     const chunk = pcm16k.slice(i, end);
-    // 创建新的 Buffer，只包含切片数据
     const b64 = Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength).toString("base64");
     sendEvent(ws, {
       type: "response.output_audio.delta",
@@ -292,7 +288,7 @@ function sendAudioChunks(ws, pcm16k) {
 }
 
 // ============================================================
-// 文字处理管线（跳过STT，直接 LLM → TTS）
+// 文字处理管线
 // ============================================================
 async function processTextPipeline(session, text) {
   if (session.isProcessing) {
@@ -311,7 +307,6 @@ async function processTextPipeline(session, text) {
     const abortController = new AbortController();
     session.abortController = abortController;
 
-    // Step 1: LLM
     const fullResponse = await callLLM(session.conversationHistory, abortController.signal);
     console.log(`[${session.id}] LLM回复: "${fullResponse.substring(0, 80)}"`);
 
@@ -320,7 +315,6 @@ async function processTextPipeline(session, text) {
       return;
     }
 
-    // 发送文字回复（模拟流式，逐句发送）
     sendEvent(ws, {
       type: "response.output_audio_transcript.delta",
       delta: fullResponse,
@@ -328,7 +322,6 @@ async function processTextPipeline(session, text) {
 
     session.conversationHistory.push({ role: "assistant", content: fullResponse });
 
-    // 清理历史
     if (session.conversationHistory.length > 20) {
       session.conversationHistory = [
         session.conversationHistory[0],
@@ -336,7 +329,6 @@ async function processTextPipeline(session, text) {
       ];
     }
 
-    // Step 2: TTS
     sendEvent(ws, { type: "vox.status", status: "speaking" });
     session.isSpeaking = true;
 
@@ -370,7 +362,7 @@ async function processTextPipeline(session, text) {
 }
 
 // ============================================================
-// 音频处理管线（VAD → STT → LLM → TTS）
+// 音频处理管线
 // ============================================================
 async function processAudioPipeline(session) {
   if (session.isProcessing) return;
@@ -385,7 +377,6 @@ async function processAudioPipeline(session) {
   }
 
   try {
-    // Step 1: STT
     sendEvent(ws, { type: "vox.status", status: "transcribing" });
     console.log(`[${session.id}] 开始STT (${audioBuffer.size} bytes)`);
 
@@ -405,7 +396,6 @@ async function processAudioPipeline(session) {
       transcript: text,
     });
 
-    // Step 2: LLM
     sendEvent(ws, { type: "vox.status", status: "thinking" });
     session.conversationHistory.push({ role: "user", content: text });
 
@@ -434,7 +424,6 @@ async function processAudioPipeline(session) {
       ];
     }
 
-    // Step 3: TTS
     sendEvent(ws, { type: "vox.status", status: "speaking" });
     session.isSpeaking = true;
 
@@ -472,7 +461,7 @@ const app = express();
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.json({ name: "超哥超车 · 数字人服务器", version: "3.2", status: "running", time: new Date().toISOString() });
+  res.json({ name: "超哥超车 · 数字人服务器", version: "3.3", status: "running", time: new Date().toISOString() });
 });
 
 app.get("/health", (req, res) => {
@@ -482,7 +471,7 @@ app.get("/health", (req, res) => {
 const server = http.createServer(app);
 
 // ============================================================
-// WebSocket 服务器
+// WebSocket 服务器 - v3.3 使用 addEventListener 方式
 // ============================================================
 const wss = new WebSocketServer({ server, path: "/ws" });
 
@@ -501,10 +490,111 @@ wss.on("connection", (ws, req) => {
     avatar: "on",
   });
 
-  // 消息处理 - 使用普通函数而非async，避免ws库兼容性问题
-  ws.on("message", (data, isBinary) => {
-    console.log(`[${session.id}] RAW消息: type=${typeof data}, isBinary=${isBinary}, len=${data.length || data.byteLength || '?'}`);
-    handleMessage(session, data);
+  // v3.3: 使用 addEventListener 方式处理消息
+  ws.addEventListener("message", (event) => {
+    const data = event.data;
+    console.log(`[${session.id}] RAW消息: type=${typeof data}, len=${typeof data === 'string' ? data.length : (data.byteLength || '?')}`);
+    
+    try {
+      // 处理二进制数据
+      if (data instanceof ArrayBuffer) {
+        const buf = Buffer.from(data);
+        console.log(`[${session.id}] 收到二进制数据: ${buf.length} bytes`);
+        session.audioBuffer.addChunk(buf.toString("base64"));
+        return;
+      }
+      
+      if (Buffer.isBuffer(data)) {
+        console.log(`[${session.id}] 收到Buffer: ${data.length} bytes`);
+        session.audioBuffer.addChunk(data.toString("base64"));
+        return;
+      }
+
+      // 处理文本消息
+      const raw = typeof data === "string" ? data : data.toString();
+      console.log(`[${session.id}] 文本内容: ${raw.substring(0, 200)}`);
+      const msg = JSON.parse(raw);
+      const { type } = msg;
+
+      console.log(`[${session.id}] 收到消息: type=${type}`);
+
+      switch (type) {
+        case "input_audio_buffer.append": {
+          const { audio } = msg;
+          if (!audio) break;
+          session.audioBuffer.addChunk(audio);
+          const pcmChunk = Buffer.from(audio, "base64");
+          const vadResult = session.vad.processAudio(pcmChunk);
+          if (vadResult.stateChanged && vadResult.newState === "speech_start") {
+            if (session.isSpeaking && session.abortController) {
+              session.abortController.abort();
+            }
+            session.isSpeaking = false;
+            sendEvent(session.ws, { type: "input_audio_buffer.speech_started" });
+          }
+          if (vadResult.stateChanged && vadResult.newState === "speech_end") {
+            processAudioPipeline(session);
+          }
+          break;
+        }
+
+        case "response.cancel": {
+          if (session.abortController) {
+            session.abortController.abort();
+          }
+          session.isProcessing = false;
+          session.isSpeaking = false;
+          session.audioBuffer.clear();
+          sendEvent(session.ws, { type: "response.done" });
+          break;
+        }
+
+        case "text_input": {
+          const { text } = msg;
+          if (!text || !text.trim()) break;
+          const trimmed = text.trim();
+          console.log(`[${session.id}] 处理文字输入: "${trimmed}"`);
+          sendEvent(session.ws, {
+            type: "conversation.item.input_audio_transcription.completed",
+            transcript: trimmed,
+          });
+          processTextPipeline(session, trimmed);
+          break;
+        }
+
+        case "vox.persona": {
+          const { id } = msg;
+          if (PERSONAS[id]) {
+            session.persona = id;
+            session.conversationHistory = [
+              { role: "system", content: PERSONAS[id].systemPrompt },
+            ];
+            sendEvent(session.ws, {
+              type: "vox.status",
+              status: "persona_changed",
+              persona: id,
+              avatar: "on",
+            });
+          }
+          break;
+        }
+
+        case "ping": {
+          sendEvent(session.ws, { type: "pong", time: Date.now() });
+          break;
+        }
+
+        default:
+          console.log(`[${session.id}] 未知消息类型: ${type}`);
+          break;
+      }
+    } catch (err) {
+      console.error(`[${session.id}] 消息处理错误:`, err.message, err.stack);
+      sendEvent(session.ws, {
+        type: "error",
+        error: { message: `消息解析错误: ${err.message}` },
+      });
+    }
   });
 
   ws.on("close", (code, reason) => {
@@ -520,118 +610,12 @@ wss.on("connection", (ws, req) => {
   });
 });
 
-// 消息处理函数（非async，内部调用async函数）
-function handleMessage(session, data) {
-  try {
-    // 处理二进制数据
-    if (Buffer.isBuffer(data)) {
-      session.audioBuffer.addChunk(data.toString("base64"));
-      return;
-    }
-
-    // 处理字符串
-    const raw = typeof data === "string" ? data : data.toString();
-    const msg = JSON.parse(raw);
-    const { type } = msg;
-
-    console.log(`[${session.id}] 收到消息: type=${type}`);
-
-    switch (type) {
-      // ======== 音频输入 ========
-      case "input_audio_buffer.append": {
-        const { audio } = msg;
-        if (!audio) break;
-
-        session.audioBuffer.addChunk(audio);
-
-        const pcmChunk = Buffer.from(audio, "base64");
-        const vadResult = session.vad.processAudio(pcmChunk);
-
-        if (vadResult.stateChanged && vadResult.newState === "speech_start") {
-          if (session.isSpeaking && session.abortController) {
-            session.abortController.abort();
-          }
-          session.isSpeaking = false;
-          sendEvent(session.ws, { type: "input_audio_buffer.speech_started" });
-        }
-
-        if (vadResult.stateChanged && vadResult.newState === "speech_end") {
-          processAudioPipeline(session);
-        }
-        break;
-      }
-
-      // ======== 取消/打断 ========
-      case "response.cancel": {
-        if (session.abortController) {
-          session.abortController.abort();
-        }
-        session.isProcessing = false;
-        session.isSpeaking = false;
-        session.audioBuffer.clear();
-        sendEvent(session.ws, { type: "response.done" });
-        break;
-      }
-
-      // ======== 文字输入 ========
-      case "text_input": {
-        const { text } = msg;
-        if (!text || !text.trim()) break;
-        const trimmed = text.trim();
-        sendEvent(session.ws, {
-          type: "conversation.item.input_audio_transcription.completed",
-          transcript: trimmed,
-        });
-        processTextPipeline(session, trimmed);
-        break;
-      }
-
-      // ======== 人设切换 ========
-      case "vox.persona": {
-        const { id } = msg;
-        if (PERSONAS[id]) {
-          session.persona = id;
-          session.conversationHistory = [
-            { role: "system", content: PERSONAS[id].systemPrompt },
-          ];
-          sendEvent(session.ws, {
-            type: "vox.status",
-            status: "persona_changed",
-            persona: id,
-            avatar: "on",
-          });
-        }
-        break;
-      }
-
-      // ======== Ping ========
-      case "ping": {
-        sendEvent(session.ws, { type: "pong", time: Date.now() });
-        break;
-      }
-
-      default:
-        console.log(`[${session.id}] 未知消息类型: ${type}`);
-        break;
-    }
-  } catch (err) {
-    console.error(`[${session.id}] 消息处理错误:`, err.message);
-    sendEvent(session.ws, {
-      type: "error",
-      error: { message: `消息解析错误: ${err.message}` },
-    });
-  }
-}
-
 // ============================================================
 // 启动
 // ============================================================
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚗 超哥超车 · 数字人服务器 v3.2 已启动`);
+  console.log(`🚗 超哥超车 · 数字人服务器 v3.3 已启动`);
   console.log(`   HTTP:  http://0.0.0.0:${PORT}`);
   console.log(`   WS:    ws://0.0.0.0:${PORT}/ws`);
   console.log(`   API Key: ${process.env.DEEPSEEK_API_KEY ? "✓ 已配置" : "✗ 未配置"}`);
-  console.log(`   LLM模型: deepseek-ai/DeepSeek-V4-Flash`);
-  console.log(`   TTS模型: FunAudioLLM/CosyVoice2-0.5B`);
-  console.log(`   STT模型: FunAudioLLM/SenseVoiceSmall`);
 });
