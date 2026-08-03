@@ -1,5 +1,5 @@
 // ============================================================
-// 超哥超车 · 数字人语音聊天云端服务器 v3.1
+// 超哥超车 · 数字人语音聊天云端服务器 v3.2
 // 协议：OpenAI Realtime 兼容事件 + 自定义 vox.* 事件
 // 管线：语音(VAD→STT→LLM→TTS) + 文字(LLM→TTS)
 // 全部通过硅基流动 API 调用，零成本部署
@@ -282,6 +282,7 @@ function sendAudioChunks(ws, pcm16k) {
   for (let i = 0; i < pcm16k.length; i += chunkSize) {
     const end = Math.min(i + chunkSize, pcm16k.length);
     const chunk = pcm16k.slice(i, end);
+    // 创建新的 Buffer，只包含切片数据
     const b64 = Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength).toString("base64");
     sendEvent(ws, {
       type: "response.output_audio.delta",
@@ -319,6 +320,7 @@ async function processTextPipeline(session, text) {
       return;
     }
 
+    // 发送文字回复（模拟流式，逐句发送）
     sendEvent(ws, {
       type: "response.output_audio_transcript.delta",
       delta: fullResponse,
@@ -326,6 +328,7 @@ async function processTextPipeline(session, text) {
 
     session.conversationHistory.push({ role: "assistant", content: fullResponse });
 
+    // 清理历史
     if (session.conversationHistory.length > 20) {
       session.conversationHistory = [
         session.conversationHistory[0],
@@ -469,7 +472,7 @@ const app = express();
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.json({ name: "超哥超车 · 数字人服务器", version: "3.1", status: "running", time: new Date().toISOString() });
+  res.json({ name: "超哥超车 · 数字人服务器", version: "3.2", status: "running", time: new Date().toISOString() });
 });
 
 app.get("/health", (req, res) => {
@@ -522,7 +525,6 @@ function handleMessage(session, data) {
   try {
     // 处理二进制数据
     if (Buffer.isBuffer(data)) {
-      console.log(`[${session.id}] 收到二进制数据: ${data.length} bytes`);
       session.audioBuffer.addChunk(data.toString("base64"));
       return;
     }
@@ -625,7 +627,7 @@ function handleMessage(session, data) {
 // 启动
 // ============================================================
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚗 超哥超车 · 数字人服务器 v3.1 已启动`);
+  console.log(`🚗 超哥超车 · 数字人服务器 v3.2 已启动`);
   console.log(`   HTTP:  http://0.0.0.0:${PORT}`);
   console.log(`   WS:    ws://0.0.0.0:${PORT}/ws`);
   console.log(`   API Key: ${process.env.DEEPSEEK_API_KEY ? "✓ 已配置" : "✗ 未配置"}`);
