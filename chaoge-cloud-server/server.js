@@ -1,5 +1,5 @@
 // ============================================================
-// 超哥超车 · 数字人语音聊天云端服务器 v2.3-deploy
+// 超哥超车 · 数字人语音聊天云端服务器 v3.0
 // 协议：OpenAI Realtime 兼容事件 + 自定义 vox.* 事件
 // 管线：语音(VAD→STT→LLM→TTS) + 文字(LLM→TTS)
 // 全部通过硅基流动 API 调用，零成本部署
@@ -38,20 +38,14 @@ const PERSONAS = {
 5. 幽默接地气。说话带点糙，但句句在理，让人听得进去。
 6. 不跟风。水军吹得再凶，不好开就是不好开。
 
-回答风格：直接、简短、有力，偶尔带点幽默和自嘲。用口语化的方式表达，像朋友聊天一样。`,
+回答风格：直接、简短、有力，偶尔带点幽默和自嘲。用口语化的方式表达，像朋友聊天一样。每次回答控制在2-4句话。`,
     voice: "FunAudioLLM/CosyVoice2-0.5B:alex",
     hasImage: true,
   },
 };
 
-// 硅基流动客户端（用于 STT 语音识别 + TTS 语音合成）
-const siliconflow = new OpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: "https://api.siliconflow.cn/v1",
-});
-
-// DeepSeek LLM 客户端（也通过硅基流动调用）
-const deepseek = new OpenAI({
+// 硅基流动客户端
+const ai = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
   baseURL: "https://api.siliconflow.cn/v1",
 });
@@ -66,11 +60,9 @@ class VAD {
     this.silenceDuration = 0;
     this.stateChanged = false;
     this.newState = "silence";
-    this.frameMs = 0;
   }
 
   processAudio(pcmChunk, frameMs = 30) {
-    this.frameMs = frameMs;
     this.stateChanged = false;
     this.newState = this.state;
 
@@ -114,10 +106,7 @@ class VAD {
     return { isSpeech, energy, state: this.state, stateChanged: this.stateChanged, newState: this.newState };
   }
 
-  get isSpeaking() {
-    return this.state === "speech";
-  }
-
+  get isSpeaking() { return this.state === "speech"; }
   reset() {
     this.state = "silence";
     this.speechDuration = 0;
@@ -135,21 +124,13 @@ class AudioBuffer {
     this.chunks = [];
     this.totalBytes = 0;
   }
-
   addChunk(base64Audio) {
     const buf = Buffer.from(base64Audio, "base64");
     this.chunks.push(buf);
     this.totalBytes += buf.length;
   }
-
-  get size() {
-    return this.totalBytes;
-  }
-
-  getBuffer() {
-    return Buffer.concat(this.chunks);
-  }
-
+  get size() { return this.totalBytes; }
+  getBuffer() { return Buffer.concat(this.chunks); }
   clear() {
     this.chunks = [];
     this.totalBytes = 0;
@@ -163,7 +144,6 @@ class SessionManager {
   constructor() {
     this.sessions = new Map();
   }
-
   createSession(ws) {
     const id = uuidv4().slice(0, 8);
     const session = {
@@ -181,22 +161,20 @@ class SessionManager {
       createdAt: Date.now(),
     };
     this.sessions.set(id, session);
+    console.log(`[${id}] 新会话创建 (总数: ${this.sessions.size})`);
     return session;
   }
-
-  getSession(id) {
-    return this.sessions.get(id);
-  }
-
+  getSession(id) { return this.sessions.get(id); }
   removeSession(id) {
     this.sessions.delete(id);
+    console.log(`[${id}] 会话已移除 (总数: ${this.sessions.size})`);
   }
 }
 
 const sessionManager = new SessionManager();
 
 // ============================================================
-// PCM 工具
+// 工具函数
 // ============================================================
 function pcmToWav(pcmBuffer, sampleRate) {
   const numChannels = 1;
@@ -227,8 +205,89 @@ function pcmToWav(pcmBuffer, sampleRate) {
 }
 
 function sendEvent(ws, event) {
-  if (ws.readyState === ws.OPEN) {
-    ws.send(JSON.stringify(event));
+  try {
+    if (ws && ws.readyState === 1) { // 1 = WebSocket.OPEN
+      ws.send(JSON.stringify(event));
+    }
+  } catch (e) {
+    console.error("sendEvent error:", e.message);
+  }
+}
+
+function downsamplePCM(input, fromRate, toRate) {
+  if (fromRate === toRate) return input;
+  const ratio = fromRate / toRate;
+  const outputLength = Math.floor(input.length / ratio);
+  const output = new Int16Array(outputLength);
+  for (let i = 0; i < outputLength; i++) {
+    const srcIdx = Math.floor(i * ratio);
+    output[i] = input[Math.min(srcIdx, input.length - 1)];
+  }
+  return output;
+}
+
+// ============================================================
+// LLM 调用（非流式，更可靠）
+// ============================================================
+async function callLLM(messages, abortSignal) {
+  const response = await ai.chat.completions.create({
+    model: "deepseek-ai/DeepSeek-V4-Flash",
+    messages: messages,
+    temperature: 0.7,
+    max_tokens: 512,
+  }, { signal: abortSignal });
+  return response.choices[0].message.content;
+}
+
+// ============================================================
+// TTS 调用
+// ============================================================
+async function callTTS(text, voice) {
+  const response = await ai.audio.speech.create({
+    model: "FunAudioLLM/CosyVoice2-0.5B",
+    voice: voice,
+    input: text,
+    response_format: "pcm",
+    sample_rate: 24000,
+  });
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
+// ============================================================
+// STT 调用
+// ============================================================
+async function callSTT(pcmBuffer, sessionId) {
+  const wavBuffer = pcmToWav(pcmBuffer, SAMPLE_RATE);
+  const tmpFile = path.join(os.tmpdir(), `stt_${sessionId}_${Date.now()}.wav`);
+  fs.writeFileSync(tmpFile, wavBuffer);
+  try {
+    const transcription = await ai.audio.transcriptions.create({
+      model: "FunAudioLLM/SenseVoiceSmall",
+      file: fs.createReadStream(tmpFile),
+      language: "zh",
+      response_format: "text",
+    });
+    return (transcription || "").trim();
+  } finally {
+    try { fs.unlinkSync(tmpFile); } catch (e) {}
+  }
+}
+
+// ============================================================
+// 发送音频分片
+// ============================================================
+function sendAudioChunks(ws, pcm16k) {
+  const chunkSize = Math.floor(SAMPLE_RATE * 0.1); // 100ms per chunk
+  for (let i = 0; i < pcm16k.length; i += chunkSize) {
+    const end = Math.min(i + chunkSize, pcm16k.length);
+    const chunk = pcm16k.slice(i, end);
+    // 创建新的 Buffer，只包含切片数据
+    const b64 = Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength).toString("base64");
+    sendEvent(ws, {
+      type: "response.output_audio.delta",
+      delta: b64,
+    });
   }
 }
 
@@ -236,55 +295,40 @@ function sendEvent(ws, event) {
 // 文字处理管线（跳过STT，直接 LLM → TTS）
 // ============================================================
 async function processTextPipeline(session, text) {
-  if (session.isProcessing) return;
+  if (session.isProcessing) {
+    console.log(`[${session.id}] 跳过（正在处理中）`);
+    return;
+  }
   session.isProcessing = true;
-
   const ws = session.ws;
 
   try {
-    // ======== Step 1: LLM (DeepSeek) ========
     sendEvent(ws, { type: "vox.status", status: "thinking" });
+    console.log(`[${session.id}] 文字输入: "${text.substring(0, 50)}"`);
 
     session.conversationHistory.push({ role: "user", content: text });
 
     const abortController = new AbortController();
     session.abortController = abortController;
 
-    const stream = await deepseek.chat.completions.create({
-      model: "deepseek-ai/DeepSeek-V3.2",
-      messages: session.conversationHistory,
-      stream: true,
-      temperature: 0.7,
-      max_tokens: 512,
-    }, { signal: abortController.signal });
+    // Step 1: LLM
+    const fullResponse = await callLLM(session.conversationHistory, abortController.signal);
+    console.log(`[${session.id}] LLM回复: "${fullResponse.substring(0, 80)}"`);
 
-    let fullResponse = "";
-
-    for await (const chunk of stream) {
-      if (session.isSpeaking && session.vad.isSpeaking) {
-        abortController.abort();
-        sendEvent(ws, { type: "input_audio_buffer.speech_started" });
-        break;
-      }
-
-      const delta = chunk.choices?.[0]?.delta?.content;
-      if (delta) {
-        fullResponse += delta;
-        sendEvent(ws, {
-          type: "response.output_audio_transcript.delta",
-          delta: delta,
-        });
-      }
-    }
-
-    fullResponse = fullResponse.trim();
     if (!fullResponse) {
       session.isProcessing = false;
       return;
     }
 
+    // 发送文字回复
+    sendEvent(ws, {
+      type: "response.output_audio_transcript.delta",
+      delta: fullResponse,
+    });
+
     session.conversationHistory.push({ role: "assistant", content: fullResponse });
 
+    // 清理历史
     if (session.conversationHistory.length > 20) {
       session.conversationHistory = [
         session.conversationHistory[0],
@@ -292,36 +336,21 @@ async function processTextPipeline(session, text) {
       ];
     }
 
-    // ======== Step 2: TTS ========
+    // Step 2: TTS
     sendEvent(ws, { type: "vox.status", status: "speaking" });
     session.isSpeaking = true;
 
     const persona = PERSONAS[session.persona] || PERSONAS.chaoge;
-    const ttsResponse = await siliconflow.audio.speech.create({
-      model: "FunAudioLLM/CosyVoice2-0.5B",
-      voice: persona.voice,
-      input: fullResponse,
-      response_format: "pcm",
-      sample_rate: 24000,
-    });
+    console.log(`[${session.id}] 开始TTS...`);
+    const audioBuffer = await callTTS(fullResponse, persona.voice);
+    console.log(`[${session.id}] TTS完成: ${audioBuffer.length} bytes`);
 
-    const audioArrayBuffer = await ttsResponse.arrayBuffer();
-    const audioBufferFull = Buffer.from(audioArrayBuffer);
-
-    const pcm24k = new Int16Array(audioBufferFull.buffer, audioBufferFull.byteOffset, audioBufferFull.length / 2);
+    const pcm24k = new Int16Array(audioBuffer.buffer, audioBuffer.byteOffset, audioBuffer.length / 2);
     const pcm16k = downsamplePCM(pcm24k, 24000, SAMPLE_RATE);
 
-    const chunkSize = Math.floor(SAMPLE_RATE * 0.1);
-    for (let i = 0; i < pcm16k.length; i += chunkSize) {
-      const chunk = pcm16k.slice(i, i + chunkSize);
-      const b64 = Buffer.from(chunk.buffer).toString("base64");
-      sendEvent(ws, {
-        type: "response.output_audio.delta",
-        delta: b64,
-      });
-    }
-
+    sendAudioChunks(ws, pcm16k);
     sendEvent(ws, { type: "response.done" });
+    console.log(`[${session.id}] 文字管线完成`);
 
   } catch (error) {
     if (error.name === "AbortError") {
@@ -341,7 +370,7 @@ async function processTextPipeline(session, text) {
 }
 
 // ============================================================
-// 音频处理管线
+// 音频处理管线（VAD → STT → LLM → TTS）
 // ============================================================
 async function processAudioPipeline(session) {
   if (session.isProcessing) return;
@@ -356,26 +385,16 @@ async function processAudioPipeline(session) {
   }
 
   try {
-    // ======== Step 1: STT (Whisper) ========
+    // Step 1: STT
     sendEvent(ws, { type: "vox.status", status: "transcribing" });
+    console.log(`[${session.id}] 开始STT (${audioBuffer.size} bytes)`);
 
     const pcmBuffer = audioBuffer.getBuffer();
     audioBuffer.clear();
 
-    const wavBuffer = pcmToWav(pcmBuffer, SAMPLE_RATE);
-    const tmpFile = path.join(os.tmpdir(), `stt_${session.id}_${Date.now()}.wav`);
-    fs.writeFileSync(tmpFile, wavBuffer);
+    const text = await callSTT(pcmBuffer, session.id);
+    console.log(`[${session.id}] STT结果: "${text}"`);
 
-    const transcription = await siliconflow.audio.transcriptions.create({
-      model: "FunAudioLLM/SenseVoiceSmall",
-      file: fs.createReadStream(tmpFile),
-      language: "zh",
-      response_format: "text",
-    });
-
-    try { fs.unlinkSync(tmpFile); } catch (e) {}
-
-    const text = (transcription || "").trim();
     if (!text) {
       session.isProcessing = false;
       return;
@@ -386,46 +405,25 @@ async function processAudioPipeline(session) {
       transcript: text,
     });
 
-    // ======== Step 2: LLM (DeepSeek) ========
+    // Step 2: LLM
     sendEvent(ws, { type: "vox.status", status: "thinking" });
-
     session.conversationHistory.push({ role: "user", content: text });
 
     const abortController = new AbortController();
     session.abortController = abortController;
 
-    const stream = await deepseek.chat.completions.create({
-      model: "deepseek-ai/DeepSeek-V3.2",
-      messages: session.conversationHistory,
-      stream: true,
-      temperature: 0.7,
-      max_tokens: 512,
-    }, { signal: abortController.signal });
+    const fullResponse = await callLLM(session.conversationHistory, abortController.signal);
+    console.log(`[${session.id}] LLM回复: "${fullResponse.substring(0, 80)}"`);
 
-    let fullResponse = "";
-
-    for await (const chunk of stream) {
-      if (session.isSpeaking && session.vad.isSpeaking) {
-        abortController.abort();
-        sendEvent(ws, { type: "input_audio_buffer.speech_started" });
-        break;
-      }
-
-      const delta = chunk.choices?.[0]?.delta?.content;
-      if (delta) {
-        fullResponse += delta;
-        sendEvent(ws, {
-          type: "response.output_audio_transcript.delta",
-          delta: delta,
-        });
-      }
-    }
-
-    fullResponse = fullResponse.trim();
     if (!fullResponse) {
       session.isProcessing = false;
       return;
     }
+
+    sendEvent(ws, {
+      type: "response.output_audio_transcript.delta",
+      delta: fullResponse,
+    });
 
     session.conversationHistory.push({ role: "assistant", content: fullResponse });
 
@@ -436,42 +434,25 @@ async function processAudioPipeline(session) {
       ];
     }
 
-    // ======== Step 3: TTS (OpenAI TTS) ========
+    // Step 3: TTS
     sendEvent(ws, { type: "vox.status", status: "speaking" });
     session.isSpeaking = true;
 
     const persona = PERSONAS[session.persona] || PERSONAS.chaoge;
-    const ttsResponse = await siliconflow.audio.speech.create({
-      model: "FunAudioLLM/CosyVoice2-0.5B",
-      voice: persona.voice,
-      input: fullResponse,
-      response_format: "pcm",
-      sample_rate: 24000,
-    });
+    const audioBufferResult = await callTTS(fullResponse, persona.voice);
 
-    const audioArrayBuffer = await ttsResponse.arrayBuffer();
-    const audioBufferFull = Buffer.from(audioArrayBuffer);
-
-    const pcm24k = new Int16Array(audioBufferFull.buffer, audioBufferFull.byteOffset, audioBufferFull.length / 2);
+    const pcm24k = new Int16Array(audioBufferResult.buffer, audioBufferResult.byteOffset, audioBufferResult.length / 2);
     const pcm16k = downsamplePCM(pcm24k, 24000, SAMPLE_RATE);
 
-    const chunkSize = Math.floor(SAMPLE_RATE * 0.1);
-    for (let i = 0; i < pcm16k.length; i += chunkSize) {
-      const chunk = pcm16k.slice(i, i + chunkSize);
-      const b64 = Buffer.from(chunk.buffer).toString("base64");
-      sendEvent(ws, {
-        type: "response.output_audio.delta",
-        delta: b64,
-      });
-    }
-
+    sendAudioChunks(ws, pcm16k);
     sendEvent(ws, { type: "response.done" });
+    console.log(`[${session.id}] 音频管线完成`);
 
   } catch (error) {
     if (error.name === "AbortError") {
       sendEvent(ws, { type: "response.done" });
     } else {
-      console.error(`[${session.id}] Pipeline error:`, error.message);
+      console.error(`[${session.id}] AudioPipeline error:`, error.message);
       sendEvent(ws, {
         type: "error",
         error: { message: `处理出错: ${error.message}` },
@@ -484,59 +465,18 @@ async function processAudioPipeline(session) {
   }
 }
 
-function downsamplePCM(input, fromRate, toRate) {
-  if (fromRate === toRate) return input;
-  const ratio = fromRate / toRate;
-  const outputLength = Math.floor(input.length / ratio);
-  const output = new Int16Array(outputLength);
-  for (let i = 0; i < outputLength; i++) {
-    const srcIdx = Math.floor(i * ratio);
-    output[i] = input[Math.min(srcIdx, input.length - 1)];
-  }
-  return output;
-}
-
 // ============================================================
-// HTTP 服务器 + 静态文件服务
+// HTTP 服务器
 // ============================================================
 const app = express();
 app.use(express.json());
 
-// 静态文件：前端页面（从 web/static/ 目录提供）
-app.use("/static", express.static(path.join(__dirname, "web", "static")));
-
-// 人设列表 API
-app.get("/api/personas", (req, res) => {
-  const list = Object.values(PERSONAS).map((p) => ({
-    id: p.id,
-    name: p.name,
-    has_image: p.hasImage || false,
-  }));
-  res.json({
-    list,
-    default: "chaoge",
-    avatar: true,
-  });
-});
-
-// 人设头像 API
-app.get("/api/personas/:id/image", (req, res) => {
-  const personaId = req.params.id;
-  res.sendFile(path.join(__dirname, "web", "static", "avatar.jpg"), (err) => {
-    if (err) {
-      res.type("svg").send(`<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-        <rect fill="#1a1a2e" width="512" height="512"/>
-        <circle fill="#e94560" cx="256" cy="200" r="80"/>
-        <ellipse fill="#e94560" cx="256" cy="380" rx="120" ry="80"/>
-        <text x="256" y="470" text-anchor="middle" fill="white" font-size="20" font-family="sans-serif">超哥</text>
-      </svg>`);
-    }
-  });
-});
-
-// 主页路由
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "web", "index.html"));
+  res.json({ name: "超哥超车 · 数字人服务器", version: "3.0", status: "running", time: new Date().toISOString() });
+});
+
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", sessions: sessionManager.sessions.size });
 });
 
 const server = http.createServer(app);
@@ -546,10 +486,13 @@ const server = http.createServer(app);
 // ============================================================
 const wss = new WebSocketServer({ server, path: "/ws" });
 
-wss.on("connection", (ws) => {
-  console.log("WebSocket 客户端已连接");
+wss.on("connection", (ws, req) => {
+  const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
+  console.log(`[WS] 新连接: ${clientIp} (总连接数: ${wss.clients.size})`);
+
   const session = sessionManager.createSession(ws);
 
+  // 发送初始连接确认
   sendEvent(ws, {
     type: "vox.status",
     status: "connected",
@@ -558,94 +501,13 @@ wss.on("connection", (ws) => {
     avatar: "on",
   });
 
-  ws.on("message", async (data) => {
-    try {
-      if (data instanceof Buffer || data instanceof ArrayBuffer) {
-        const buf = Buffer.from(data);
-        session.audioBuffer.addChunk(buf.toString("base64"));
-        return;
-      }
-
-      const msg = JSON.parse(data.toString());
-      const { type } = msg;
-
-      switch (type) {
-        case "input_audio_buffer.append": {
-          const { audio } = msg;
-          if (!audio) break;
-
-          session.audioBuffer.addChunk(audio);
-
-          const pcmChunk = Buffer.from(audio, "base64");
-          const vadResult = session.vad.processAudio(pcmChunk);
-
-          if (vadResult.stateChanged && vadResult.newState === "speech_start") {
-            if (session.isSpeaking) {
-              if (session.abortController) {
-                session.abortController.abort();
-              }
-              session.isSpeaking = false;
-              sendEvent(ws, { type: "input_audio_buffer.speech_started" });
-            }
-          }
-
-          if (vadResult.stateChanged && vadResult.newState === "speech_end") {
-            processAudioPipeline(session);
-          }
-          break;
-        }
-
-        case "response.cancel": {
-          if (session.abortController) {
-            session.abortController.abort();
-          }
-          session.isProcessing = false;
-          session.isSpeaking = false;
-          session.audioBuffer.clear();
-          sendEvent(ws, { type: "response.done" });
-          break;
-        }
-
-        case "text_input": {
-          const { text } = msg;
-          if (!text || !text.trim()) break;
-          const trimmed = text.trim();
-          // 通知前端已收到文字输入
-          sendEvent(ws, {
-            type: "conversation.item.input_audio_transcription.completed",
-            transcript: trimmed,
-          });
-          processTextPipeline(session, trimmed);
-          break;
-        }
-
-        case "vox.persona": {
-          const { id } = msg;
-          if (PERSONAS[id]) {
-            session.persona = id;
-            session.conversationHistory = [
-              { role: "system", content: PERSONAS[id].systemPrompt },
-            ];
-            sendEvent(ws, {
-              type: "vox.status",
-              status: "persona_changed",
-              persona: id,
-              avatar: "on",
-            });
-          }
-          break;
-        }
-
-        default:
-          break;
-      }
-    } catch (err) {
-      console.error("消息处理错误:", err.message);
-    }
+  // 消息处理 - 使用普通函数而非async，避免ws库兼容性问题
+  ws.on("message", (data) => {
+    handleMessage(session, data);
   });
 
-  ws.on("close", () => {
-    console.log(`会话 ${session.id} 已断开`);
+  ws.on("close", (code, reason) => {
+    console.log(`[${session.id}] 连接关闭: code=${code}`);
     if (session.abortController) {
       session.abortController.abort();
     }
@@ -653,16 +515,122 @@ wss.on("connection", (ws) => {
   });
 
   ws.on("error", (err) => {
-    console.error(`会话 ${session.id} 错误:`, err.message);
+    console.error(`[${session.id}] WebSocket错误:`, err.message);
   });
 });
+
+// 消息处理函数（非async，内部调用async函数）
+function handleMessage(session, data) {
+  try {
+    // 处理二进制数据
+    if (Buffer.isBuffer(data)) {
+      session.audioBuffer.addChunk(data.toString("base64"));
+      return;
+    }
+
+    // 处理字符串
+    const raw = typeof data === "string" ? data : data.toString();
+    const msg = JSON.parse(raw);
+    const { type } = msg;
+
+    console.log(`[${session.id}] 收到消息: type=${type}`);
+
+    switch (type) {
+      // ======== 音频输入 ========
+      case "input_audio_buffer.append": {
+        const { audio } = msg;
+        if (!audio) break;
+
+        session.audioBuffer.addChunk(audio);
+
+        const pcmChunk = Buffer.from(audio, "base64");
+        const vadResult = session.vad.processAudio(pcmChunk);
+
+        if (vadResult.stateChanged && vadResult.newState === "speech_start") {
+          if (session.isSpeaking && session.abortController) {
+            session.abortController.abort();
+          }
+          session.isSpeaking = false;
+          sendEvent(session.ws, { type: "input_audio_buffer.speech_started" });
+        }
+
+        if (vadResult.stateChanged && vadResult.newState === "speech_end") {
+          processAudioPipeline(session);
+        }
+        break;
+      }
+
+      // ======== 取消/打断 ========
+      case "response.cancel": {
+        if (session.abortController) {
+          session.abortController.abort();
+        }
+        session.isProcessing = false;
+        session.isSpeaking = false;
+        session.audioBuffer.clear();
+        sendEvent(session.ws, { type: "response.done" });
+        break;
+      }
+
+      // ======== 文字输入 ========
+      case "text_input": {
+        const { text } = msg;
+        if (!text || !text.trim()) break;
+        const trimmed = text.trim();
+        sendEvent(session.ws, {
+          type: "conversation.item.input_audio_transcription.completed",
+          transcript: trimmed,
+        });
+        processTextPipeline(session, trimmed);
+        break;
+      }
+
+      // ======== 人设切换 ========
+      case "vox.persona": {
+        const { id } = msg;
+        if (PERSONAS[id]) {
+          session.persona = id;
+          session.conversationHistory = [
+            { role: "system", content: PERSONAS[id].systemPrompt },
+          ];
+          sendEvent(session.ws, {
+            type: "vox.status",
+            status: "persona_changed",
+            persona: id,
+            avatar: "on",
+          });
+        }
+        break;
+      }
+
+      // ======== Ping ========
+      case "ping": {
+        sendEvent(session.ws, { type: "pong", time: Date.now() });
+        break;
+      }
+
+      default:
+        console.log(`[${session.id}] 未知消息类型: ${type}`);
+        break;
+    }
+  } catch (err) {
+    console.error(`[${session.id}] 消息处理错误:`, err.message);
+    sendEvent(session.ws, {
+      type: "error",
+      error: { message: `消息解析错误: ${err.message}` },
+    });
+  }
+}
 
 // ============================================================
 // 启动
 // ============================================================
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚗 超哥超车 · 数字人服务器已启动`);
-  console.log(`   HTTP:    http://0.0.0.0:${PORT}`);
-  console.log(`   WebSocket: ws://0.0.0.0:${PORT}/ws`);
-  console.log(`   环境:    硅基流动API Key=${process.env.DEEPSEEK_API_KEY ? "✓" : "✗"}`);
+  console.log(`🚗 超哥超车 · 数字人服务器 v3.0 已启动`);
+  console.log(`   HTTP:  http://0.0.0.0:${PORT}`);
+  console.log(`   WS:    ws://0.0.0.0:${PORT}/ws`);
+  console.log(`   API Key: ${process.env.DEEPSEEK_API_KEY ? "✓ 已配置" : "✗ 未配置"}`);
+  console.log(`   LLM模型: deepseek-ai/DeepSeek-V4-Flash`);
+  console.log(`   TTS模型: FunAudioLLM/CosyVoice2-0.5B`);
+  console.log(`   STT模型: FunAudioLLM/SenseVoiceSmall`);
 });
